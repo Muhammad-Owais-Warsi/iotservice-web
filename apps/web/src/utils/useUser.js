@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useSession } from "@auth/create/react";
+import { useSession } from "next-auth/react";
 
 
 const useUser = () => {

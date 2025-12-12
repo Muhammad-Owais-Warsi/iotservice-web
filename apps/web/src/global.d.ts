@@ -11,7 +11,7 @@ declare module 'npm:stripe' {
 	import Stripe from 'stripe';
 	export default Stripe;
 }
-declare module '@auth/create/react' {
-	import { SessionProvider } from '@auth/react';
+declare module 'next-auth/react' {
+	import { SessionProvider } from 'next-auth/react';
 	export { SessionProvider };
 }
