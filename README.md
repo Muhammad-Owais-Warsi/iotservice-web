@@ -1,4 +1,4 @@
-# AnythingIoT - Cold Chain Monitoring System
+# Cold Chain Monitoring System
 
 A comprehensive IoT monitoring solution for cold chain logistics, providing real-time tracking of temperature, humidity, and other environmental conditions across supply chains.
 
