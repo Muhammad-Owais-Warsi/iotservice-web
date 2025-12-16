@@ -1,5 +1,6 @@
 import sql from "@/app/api/utils/sql";
 import { auth } from "@/auth";
+import { sendEmail } from "../utils/email";
 
 // GET endpoint to fetch sensor data history
 export async function GET(request) {
@@ -109,55 +110,140 @@ export async function POST(request) {
     }
 
     // Check if there's already an active alert for this device
-    const existingAlert = await sql`
-      SELECT id FROM alerts
+    // Check if there's already an active alert for this device
+    const existingAlerts = await sql`
+      SELECT id, condition_started_at, escalation_level FROM alerts
       WHERE device_id = ${deviceId}
       AND status = 'active'
       LIMIT 1
     `;
 
-    if (existingAlert.length === 0) {
-      // Create new alert
-      const alertType =
-        temperature > device.temp_threshold &&
-        humidity > device.humidity_threshold
-          ? "Temperature & Humidity Alert"
-          : temperature > device.temp_threshold
-            ? "Temperature Alert"
-            : "Humidity Alert";
+    // Helper to fetch emails by role
+    const getEmailsByRole = async (role, companyId = null, locationId = null) => {
+      let query;
+      if (role === 'admin') {
+        // Admins are global or per company? Prompt implies one Admin (Cueron). 
+        // We'll fetch all admins for simplicity or filtered by company if strictly multi-tenant.
+        // Assuming Super Admin for now, or Admin validation
+        query = sql`SELECT email FROM user_profiles WHERE role = 'admin'`;
+      } else if (role === 'master') {
+        query = sql`SELECT email FROM user_profiles WHERE role = 'master' AND company_id = ${companyId}`;
+      } else if (role === 'employee') {
+        // Engineer usually linked to location
+        query = sql`SELECT email FROM user_profiles WHERE role = 'employee' AND location_id = ${locationId}`;
+      }
+      const users = await query;
+      return users.map(u => u.email);
+    };
 
-      const message =
-        temperature > device.temp_threshold &&
-        humidity > device.humidity_threshold
-          ? `Temperature (${temperature}°C) and Humidity (${humidity}%) exceed thresholds while door is closed for >5 minutes`
-          : temperature > device.temp_threshold
-            ? `Temperature (${temperature}°C) exceeds threshold (${device.temp_threshold}°C) while door is closed for >5 minutes`
-            : `Humidity (${humidity}%) exceeds threshold (${device.humidity_threshold}%) while door is closed for >5 minutes`;
+    if (existingAlerts.length === 0) {
+      // No active alert yet. Check if we crossed the 5-minute threshold.
+      // Check if condition has persisted for >5 minutes
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
-      const severity =
-        temperature > device.temp_threshold + 5 ||
-        humidity > device.humidity_threshold + 10
-          ? "critical"
-          : "warning";
+      const recentReadings = await sql`
+          SELECT temperature, humidity, door_status, recorded_at
+          FROM sensor_data
+          WHERE device_id = ${deviceId}
+          AND recorded_at >= ${fiveMinutesAgo.toISOString()}
+          ORDER BY recorded_at ASC
+        `;
 
-      await sql`
-        INSERT INTO alerts (
-          device_id, 
-          location_id, 
-          alert_type, 
-          message, 
-          severity,
-          condition_started_at
-        )
-        VALUES (
-          ${deviceId},
-          ${device.location_id},
-          ${alertType},
-          ${message},
-          ${severity},
-          ${recentReadings[0].recorded_at}
-        )
-      `;
+      // Check if ALL readings in the last 5 minutes meet the alert condition
+      // AND we have at least one reading from 5 mins ago (to prove duration)
+      const allMeetCondition = recentReadings.length > 0 && recentReadings.every(
+        (reading) =>
+          (parseFloat(reading.temperature) > device.temp_threshold ||
+            parseFloat(reading.humidity) > device.humidity_threshold) &&
+          reading.door_status === "closed",
+      );
+
+      const oldestReading = recentReadings[0];
+      const timeDiff = oldestReading ? (Date.now() - new Date(oldestReading.recorded_at).getTime()) : 0;
+      const isFiveMins = allMeetCondition && timeDiff >= (5 * 60 * 1000);
+
+      if (isFiveMins) {
+        // CREATE INITIAL ALERT (5 mins)
+        const alertType =
+          temperature > device.temp_threshold &&
+            humidity > device.humidity_threshold
+            ? "Temperature & Humidity Alert"
+            : temperature > device.temp_threshold
+              ? "Temperature Alert"
+              : "Humidity Alert";
+
+        const message = `Anomaly detected: ${alertType}. Reading maintained for >5 minutes.`;
+        const severity = "warning";
+
+        await sql`
+            INSERT INTO alerts (
+              device_id, 
+              location_id, 
+              alert_type, 
+              message, 
+              severity,
+              condition_started_at,
+              escalation_level
+            )
+            VALUES (
+              ${deviceId},
+              ${device.location_id},
+              ${alertType},
+              ${message},
+              ${severity},
+              ${oldestReading.recorded_at},
+              0
+            )
+          `;
+
+        // NOTIFY ENGINEERS
+        // NOTIFY ENGINEERS
+
+        const engineerEmails = await getEmailsByRole('employee', null, device.location_id);
+        if (engineerEmails.length > 0) {
+          await sendEmail({
+            to: engineerEmails,
+            subject: `[ALERT] ${alertType} at ${device.location_id}`,
+            text: message
+          });
+        }
+      }
+    } else {
+      // Active Alert Exists - Check Escalation
+      const alert = existingAlerts[0];
+      const durationMs = Date.now() - new Date(alert.condition_started_at).getTime();
+      const durationMins = durationMs / 1000 / 60;
+
+      // Level 1: > 15 Minutes -> Notify Master
+
+
+      // Level 1: > 15 Minutes -> Notify Master
+      if (durationMins >= 15 && alert.escalation_level < 1) {
+        const masterEmails = await getEmailsByRole('master', device.company_id);
+        if (masterEmails.length > 0) {
+          await sendEmail({
+            to: masterEmails,
+            subject: `[ESCALATION] Alert active for 15+ mins at Location ${device.location_id}`,
+            text: `Alert has been active for ${Math.floor(durationMins)} minutes. Please investigate.`
+          });
+        }
+        // Upgrade Level
+        await sql`UPDATE alerts SET escalation_level = 1 WHERE id = ${alert.id}`;
+      }
+
+      // Level 2: > 30 Minutes -> Notify Admin
+      else if (durationMins >= 30 && alert.escalation_level < 2) {
+        const adminEmails = await getEmailsByRole('admin');
+        if (adminEmails.length > 0) {
+          await sendEmail({
+            to: adminEmails,
+            subject: `[CRITICAL ESCALATION] Alert active for 30+ mins at Location ${device.location_id}`,
+            text: `CRITICAL: Alert has been active for ${Math.floor(durationMins)} minutes. System anomaly persisting.`
+          });
+        }
+        // Upgrade Level
+        await sql`UPDATE alerts SET escalation_level = 2 WHERE id = ${alert.id}`;
+      }
     }
 
     return Response.json({ success: true });
