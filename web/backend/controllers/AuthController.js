@@ -6,8 +6,8 @@ const {
     sendCOdeSchema,
     verifyPassCodeSchema,
     changePasswordSchema,
-} = require("../Midddleware/ValidatorsAuth");
-const transport = require("../Midddleware/sendMail");
+} = require("../middleware/ValidatorsAuth");
+const transport = require("../middleware/sendMail");
 const prisma = require("../utils/prismaClient");
 
 exports.register = async (req, res) => {
