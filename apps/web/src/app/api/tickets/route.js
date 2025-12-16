@@ -29,12 +29,12 @@ export async function GET() {
           d.name as device_name,
           up.name as created_by_name
         FROM tickets t
-        JOIN locations l ON t.location_id = l.id
-        JOIN devices d ON t.device_id = d.id
-        JOIN user_profiles up ON t.created_by = up.id
+        LEFT JOIN locations l ON t.location_id = l.id
+        LEFT JOIN devices d ON t.device_id = d.id
+        LEFT JOIN user_profiles up ON t.created_by = up.id
         ORDER BY t.created_at DESC
       `;
-    } else if (profile.role === "manager") {
+    } else if (profile.role === "master") {
       tickets = await sql`
         SELECT 
           t.*,
@@ -42,9 +42,9 @@ export async function GET() {
           d.name as device_name,
           up.name as created_by_name
         FROM tickets t
-        JOIN locations l ON t.location_id = l.id
-        JOIN devices d ON t.device_id = d.id
-        JOIN user_profiles up ON t.created_by = up.id
+        LEFT JOIN locations l ON t.location_id = l.id
+        LEFT JOIN devices d ON t.device_id = d.id
+        LEFT JOIN user_profiles up ON t.created_by = up.id
         WHERE l.company_id = ${profile.company_id}
         ORDER BY t.created_at DESC
       `;
@@ -57,9 +57,9 @@ export async function GET() {
             d.name as device_name,
             up.name as created_by_name
           FROM tickets t
-          JOIN locations l ON t.location_id = l.id
-          JOIN devices d ON t.device_id = d.id
-          JOIN user_profiles up ON t.created_by = up.id
+          LEFT JOIN locations l ON t.location_id = l.id
+          LEFT JOIN devices d ON t.device_id = d.id
+          LEFT JOIN user_profiles up ON t.created_by = up.id
           WHERE t.location_id = ${profile.location_id}
           ORDER BY t.created_at DESC
         `;
@@ -80,35 +80,129 @@ export async function POST(request) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // 1. Fetch the user's profile to check permissions
     const userProfile = await sql`
-      SELECT id, role FROM user_profiles 
+      SELECT id, role, company_id, location_id FROM user_profiles 
       WHERE auth_user_id = ${session.user.id}
       LIMIT 1
     `;
 
+    // 2. Security Check: Only Managers (Master) and Employees can create tickets
     if (
       userProfile.length === 0 ||
-      !["manager", "employee"].includes(userProfile[0].role)
+      !["master", "employee"].includes(userProfile[0].role)
     ) {
       return Response.json(
-        { error: "Only managers and employees can create tickets" },
+        { error: "Only masters and employees can create tickets" },
         { status: 403 },
       );
     }
 
     const body = await request.json();
-    const { locationId, deviceId, problem, visitDate } = body;
 
-    if (!locationId || !deviceId || !problem || !visitDate) {
+    // 3. Extract all the new fields from the request body
+    const {
+      // Basic Info
+      company_name,
+      company_phone,
+      company_email,
+      brand_name,
+      years_of_operation,
+
+      // Billing
+      gst,
+      billing_address,
+
+      // Location & Time
+      locationId, // We still use ID for the system linkage
+      location_string, // Optional string override if provided
+      visitDate,
+      visitTime, // Can be merged into visitDate
+
+      // Equipment
+      equipment_type,
+      equipment_Slno,
+      capacity,
+      photo_of_specification_plate,
+
+      // Issue
+      problem_stat, // problem_statement
+      photos, // Array of strings (URLs)
+
+      // POC (Point of Contact)
+      poc_name,
+      poc_phno,
+      poc_email
+    } = body;
+
+    // 4. Validation (Basic)
+    if (!locationId || !problem_stat || !visitDate) {
       return Response.json(
-        { error: "All fields are required" },
+        { error: "Location, Problem, and Date are required fields." },
         { status: 400 },
       );
     }
 
+    // Merge Date and Time if needed, or just use visitDate as ISO string
+    const finalVisitDate = visitDate;
+
+    // 5. Insert into Database
+    // We map the JavaScript variable names to the SQL Column names we defined in supabase_schema.sql
     const newTicket = await sql`
-      INSERT INTO tickets (location_id, device_id, created_by, problem, visit_date)
-      VALUES (${locationId}, ${deviceId}, ${userProfile[0].id}, ${problem}, ${visitDate})
+      INSERT INTO tickets (
+        created_by,
+        location_id,
+        
+        company_name,
+        company_phone,
+        company_email,
+        brand_name,
+        years_of_operation,
+        
+        gst_number,
+        billing_address,
+        
+        equipment_type,
+        equipment_serial_no,
+        capacity,
+        
+        visit_date,
+        
+        problem_statement,
+        photos,
+        photo_spec_plate,
+        
+        poc_name,
+        poc_phone,
+        poc_email
+      )
+      VALUES (
+        ${userProfile[0].id},
+        ${locationId},
+        
+        ${company_name},
+        ${company_phone},
+        ${company_email},
+        ${brand_name},
+        ${years_of_operation},
+        
+        ${gst},
+        ${billing_address},
+        
+        ${equipment_type},
+        ${equipment_Slno},
+        ${capacity},
+        
+        ${finalVisitDate},
+        
+        ${problem_stat},
+        ${photos || []}, -- Default to empty array if null
+        ${photo_of_specification_plate},
+        
+        ${poc_name},
+        ${poc_phno},
+        ${poc_email}
+      )
       RETURNING *
     `;
 
