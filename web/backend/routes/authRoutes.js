@@ -6,8 +6,8 @@ const {
     changePassword,
     sendForgotPasswordCode,
     verifyForgotPasswordCode,
-} = require("../Controllers/AuthController");
-const { identifer } = require("../Midddleware/identifer");
+} = require("../controllers/AuthController");
+const { identifer } = require("../middleware/identifier");
 
 const router = express.Router();
 
