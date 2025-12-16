@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import useUser from "@/utils/useUser";
 import Sidebar from "../../components/Sidebar";
 import TopBar from "../../components/TopBar";
-import { Plus, Calendar, MapPin, Wrench, Clock } from "lucide-react";
+import { Plus, Wrench } from "lucide-react";
 
 export default function TicketsPage() {
   const { data: user, loading: userLoading } = useUser();
@@ -10,15 +10,39 @@ export default function TicketsPage() {
   const [profile, setProfile] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [devices, setDevices] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Expanded Form Data State
   const [formData, setFormData] = useState({
     locationId: "",
-    deviceId: "",
-    problem: "",
     visitDate: "",
+
+    // Company Details
+    company_name: "",
+    company_phone: "",
+    company_email: "",
+    brand_name: "",
+    years_of_operation: "",
+
+    // Billing
+    gst: "",
+    billing_address: "",
+
+    // Equipment
+    equipment_type: "",
+    equipment_Slno: "",
+    capacity: "",
+    photo_of_specification_plate: "", // URL or base64 placeholder
+
+    // Issue
+    problem_stat: "",
+    photos: [], // Array of URLs
+
+    // POC
+    poc_name: "",
+    poc_phno: "",
+    poc_email: ""
   });
 
   useEffect(() => {
@@ -56,20 +80,6 @@ export default function TicketsPage() {
     }
   }, [user]);
 
-  const handleLocationChange = async (locationId) => {
-    setFormData({ ...formData, locationId, deviceId: "" });
-
-    if (locationId) {
-      const res = await fetch(`/api/devices?locationId=${locationId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setDevices(data.devices || []);
-      }
-    } else {
-      setDevices([]);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -84,16 +94,39 @@ export default function TicketsPage() {
         const newTicket = await response.json();
         setTickets([newTicket.ticket, ...tickets]);
         setShowCreateModal(false);
+        // Reset Form
         setFormData({
           locationId: "",
-          deviceId: "",
-          problem: "",
           visitDate: "",
+          company_name: "",
+          company_phone: "",
+          company_email: "",
+          brand_name: "",
+          years_of_operation: "",
+          gst: "",
+          billing_address: "",
+          equipment_type: "",
+          equipment_Slno: "",
+          capacity: "",
+          photo_of_specification_plate: "",
+          problem_stat: "",
+          photos: [],
+          poc_name: "",
+          poc_phno: "",
+          poc_email: ""
         });
       }
     } catch (error) {
       console.error("Failed to create ticket:", error);
     }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   if (userLoading || loading) {
@@ -113,14 +146,10 @@ export default function TicketsPage() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "pending":
-        return "text-[#FFFF00] border-[#FFFF00] bg-[#2A2A0A]";
-      case "scheduled":
-        return "text-[#5B94FF] border-[#4F8BFF] bg-[#1A2A3A]";
-      case "completed":
-        return "text-[#4ADE80] border-[#22C55E] bg-[#0A2A1A]";
-      default:
-        return "text-[#B0B0B0] border-[#404040] bg-[#2A2A2A]";
+      case "open": return "text-[#FFFF00] border-[#FFFF00] bg-[#2A2A0A]";
+      case "in_progress": return "text-[#5B94FF] border-[#4F8BFF] bg-[#1A2A3A]";
+      case "closed": return "text-[#4ADE80] border-[#22C55E] bg-[#0A2A1A]";
+      default: return "text-[#B0B0B0] border-[#404040] bg-[#2A2A2A]";
     }
   };
 
@@ -149,13 +178,17 @@ export default function TicketsPage() {
                 Manage service requests for your facilities
               </p>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center px-4 py-2 bg-[#4F8BFF] text-white rounded-lg hover:bg-[#3D6FE5] active:bg-[#2A5CC7] transition-colors"
-            >
-              <Plus size={20} className="mr-2" />
-              <span className="hidden sm:inline">New Ticket</span>
-            </button>
+            {/* ONLY Master and Employee can create tickets */}
+            {['master', 'employee'].includes(profile.role) && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center px-4 py-2 bg-[#4F8BFF] text-white rounded-lg hover:bg-[#3D6FE5] active:bg-[#2A5CC7] transition-colors"
+              >
+                <Plus size={20} className="mr-2" />
+                <span className="hidden sm:inline">New Ticket</span>
+              </button>
+            )}
+
           </div>
 
           {tickets.length === 0 ? (
@@ -174,51 +207,27 @@ export default function TicketsPage() {
                 <table className="w-full min-w-[800px]">
                   <thead className="bg-[#2A2A2A] border-b border-[#333333]">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">
-                        Ticket ID
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">
-                        Location
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">
-                        Device
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">
-                        Problem
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">
-                        Visit Date
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">
-                        Status
-                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">Ticket ID</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">Company</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">Equipment</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">Problem</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">Visit Date</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-[#A0A0A0] uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#333333]">
                     {tickets.map((ticket) => (
-                      <tr
-                        key={ticket.id}
-                        className="hover:bg-[#262626] transition-colors"
-                      >
-                        <td className="px-6 py-4 text-sm text-[#E5E5E5] font-mono">
-                          #{ticket.id}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-[#E5E5E5]">
-                          {ticket.location_name}
-                        </td>
+                      <tr key={ticket.id} className="hover:bg-[#262626] transition-colors">
+                        <td className="px-6 py-4 text-sm text-[#E5E5E5] font-mono">#{ticket.id?.substring(0, 8)}</td>
+                        <td className="px-6 py-4 text-sm text-[#E5E5E5]">{ticket.company_name}</td>
                         <td className="px-6 py-4 text-sm text-[#B0B0B0]">
-                          {ticket.device_name}
+                          <div>{ticket.equipment_type}</div>
+                          <div className="text-xs text-[#666]">SN: {ticket.equipment_serial_no}</div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-[#E5E5E5] max-w-xs truncate">
-                          {ticket.problem}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-[#B0B0B0]">
-                          {new Date(ticket.visit_date).toLocaleString()}
-                        </td>
+                        <td className="px-6 py-4 text-sm text-[#E5E5E5] max-w-xs truncate">{ticket.problem_statement}</td>
+                        <td className="px-6 py-4 text-sm text-[#B0B0B0]">{new Date(ticket.visit_date).toLocaleDateString()}</td>
                         <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(ticket.status)}`}
-                          >
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(ticket.status)}`}>
                             {ticket.status}
                           </span>
                         </td>
@@ -232,105 +241,81 @@ export default function TicketsPage() {
         </main>
       </div>
 
-      {/* Create Ticket Modal */}
+      {/* Create Ticket Modal - FULL OVERHAUL */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1E1E1E] rounded-xl border border-[#333333] p-6 max-w-md w-full">
-            <h2 className="text-[#E5E5E5] text-xl font-bold mb-4">
-              Create Service Ticket
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[#E5E5E5] mb-2">
-                  Location
-                </label>
-                <select
-                  required
-                  value={formData.locationId}
-                  onChange={(e) => handleLocationChange(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#2A2A2A] border border-[#404040] rounded-lg text-[#E5E5E5] focus:outline-none focus:ring-2 focus:ring-[#4F8BFF]"
-                >
-                  <option value="">Select location</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.name}
-                    </option>
-                  ))}
-                </select>
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-[#1E1E1E] rounded-xl border border-[#333333] p-6 max-w-2xl w-full my-8">
+            <h2 className="text-[#E5E5E5] text-xl font-bold mb-4">Create Service Ticket</h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
+
+              {/* Section 1: Company Info */}
+              <div className="space-y-4">
+                <h3 className="text-[#4F8BFF] font-semibold text-sm uppercase tracking-wide">Company Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input name="company_name" placeholder="Company Name" value={formData.company_name} onChange={handleInputChange} className="input-dark" required />
+                  <input name="company_phone" placeholder="Company Phone" value={formData.company_phone} onChange={handleInputChange} className="input-dark" required />
+                  <input name="company_email" type="email" placeholder="Company Email" value={formData.company_email} onChange={handleInputChange} className="input-dark" required />
+                  <input name="brand_name" placeholder="Brand Name" value={formData.brand_name} onChange={handleInputChange} className="input-dark" />
+                  <input name="years_of_operation" type="number" placeholder="Years of Operation" value={formData.years_of_operation} onChange={handleInputChange} className="input-dark" />
+                  <input name="gst" placeholder="GST Number" value={formData.gst} onChange={handleInputChange} className="input-dark" />
+                </div>
+                <textarea name="billing_address" placeholder="Billing Address" rows={2} value={formData.billing_address} onChange={handleInputChange} className="input-dark w-full" />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#E5E5E5] mb-2">
-                  Device
-                </label>
-                <select
-                  required
-                  value={formData.deviceId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, deviceId: e.target.value })
-                  }
-                  className="w-full px-4 py-3 bg-[#2A2A2A] border border-[#404040] rounded-lg text-[#E5E5E5] focus:outline-none focus:ring-2 focus:ring-[#4F8BFF]"
-                  disabled={!formData.locationId}
-                >
-                  <option value="">Select device</option>
-                  {devices.map((dev) => (
-                    <option key={dev.id} value={dev.id}>
-                      {dev.name}
-                    </option>
-                  ))}
-                </select>
+              {/* Section 2: Equipment & Location */}
+              <div className="space-y-4">
+                <h3 className="text-[#4F8BFF] font-semibold text-sm uppercase tracking-wide">Equipment & Location</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <select name="locationId" value={formData.locationId} onChange={handleInputChange} className="input-dark" required>
+                    <option value="">Select Location</option>
+                    {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+                  </select>
+                  <input name="equipment_type" placeholder="Equipment Type" value={formData.equipment_type} onChange={handleInputChange} className="input-dark" required />
+                  <input name="equipment_Slno" placeholder="Serial Number" value={formData.equipment_Slno} onChange={handleInputChange} className="input-dark" required />
+                  <input name="capacity" type="number" placeholder="Capacity" value={formData.capacity} onChange={handleInputChange} className="input-dark" />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#E5E5E5] mb-2">
-                  Problem Description
-                </label>
-                <textarea
-                  required
-                  value={formData.problem}
-                  onChange={(e) =>
-                    setFormData({ ...formData, problem: e.target.value })
-                  }
-                  className="w-full px-4 py-3 bg-[#2A2A2A] border border-[#404040] rounded-lg text-[#E5E5E5] placeholder-[#808080] focus:outline-none focus:ring-2 focus:ring-[#4F8BFF]"
-                  rows={3}
-                  placeholder="Describe the issue..."
-                />
+              {/* Section 3: The Problem */}
+              <div className="space-y-4">
+                <h3 className="text-[#4F8BFF] font-semibold text-sm uppercase tracking-wide">The Issue</h3>
+                <textarea name="problem_stat" placeholder="Describe the problem in detail..." rows={3} value={formData.problem_stat} onChange={handleInputChange} className="input-dark w-full" required />
+                <input type="datetime-local" name="visitDate" value={formData.visitDate} onChange={handleInputChange} className="input-dark w-full" required />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#E5E5E5] mb-2">
-                  Preferred Visit Date & Time
-                </label>
-                <input
-                  required
-                  type="datetime-local"
-                  value={formData.visitDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, visitDate: e.target.value })
-                  }
-                  className="w-full px-4 py-3 bg-[#2A2A2A] border border-[#404040] rounded-lg text-[#E5E5E5] focus:outline-none focus:ring-2 focus:ring-[#4F8BFF]"
-                />
+              {/* Section 4: POC */}
+              <div className="space-y-4">
+                <h3 className="text-[#4F8BFF] font-semibold text-sm uppercase tracking-wide">Point of Contact</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <input name="poc_name" placeholder="POC Name" value={formData.poc_name} onChange={handleInputChange} className="input-dark" required />
+                  <input name="poc_phno" placeholder="POC Phone" value={formData.poc_phno} onChange={handleInputChange} className="input-dark" required />
+                  <input name="poc_email" type="email" placeholder="POC Email" value={formData.poc_email} onChange={handleInputChange} className="input-dark" required />
+                </div>
               </div>
 
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-2 bg-[#2A2A2A] text-[#E5E5E5] rounded-lg hover:bg-[#333333] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-[#4F8BFF] text-white rounded-lg hover:bg-[#3D6FE5] transition-colors"
-                >
-                  Create Ticket
-                </button>
+              <div className="flex space-x-3 pt-4 border-t border-[#333]">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 px-4 py-2 bg-[#2A2A2A] text-[#E5E5E5] rounded-lg hover:bg-[#333333] transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-[#4F8BFF] text-white rounded-lg hover:bg-[#3D6FE5] transition-colors">Submit Ticket</button>
               </div>
             </form>
           </div>
         </div>
       )}
+      <style jsx>{`
+        .input-dark {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: #2A2A2A;
+            border: 1px solid #404040;
+            border-radius: 0.5rem;
+            color: #E5E5E5;
+            outline: none;
+        }
+        .input-dark:focus {
+            ring: 2px solid #4F8BFF;
+            border-color: transparent;
+        }
+      `}</style>
     </div>
   );
 }
