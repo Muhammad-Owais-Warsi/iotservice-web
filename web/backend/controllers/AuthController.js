@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const { doHash, doHashValidation, hmacProcess } = require("../utils/hasing");
+const { doHash, doHashValidation, hmacProcess } = require("../utils/hashing");
 const {
     registerSchema,
     loginSchema,
@@ -8,8 +8,7 @@ const {
     changePasswordSchema,
 } = require("../Midddleware/ValidatorsAuth");
 const transport = require("../Midddleware/sendMail");
-
-const userModel = require("../models/userModel");
+const prisma = require("../utils/prismaClient");
 
 exports.register = async (req, res) => {
     const { rollNo, password, email, roles } = req.body;
@@ -28,7 +27,9 @@ exports.register = async (req, res) => {
             });
         }
 
-        const existingUser = await userModel.findOne({ rollNo });
+        const existingUser = await prisma.user.findUnique({
+            where: { rollNo: Number(rollNo) }
+        });
 
         if (existingUser) {
             return res.status(400).json({
@@ -39,16 +40,16 @@ exports.register = async (req, res) => {
 
         const hashedPassword = await doHash(password, 12);
 
-        const newUser = new userModel({
-            rollNo,
-
-            password: hashedPassword,
-            email,
-            roles,
+        const savedUser = await prisma.user.create({
+            data: {
+                rollNo: Number(rollNo),
+                password: hashedPassword,
+                email,
+                roles,
+            }
         });
 
-        const savedUser = await newUser.save();
-        const userWithoutPassword = savedUser.toObject();
+        const userWithoutPassword = { ...savedUser };
         delete userWithoutPassword.password;
 
         res.status(201).json({
@@ -81,9 +82,12 @@ exports.login = async (req, res) => {
             });
         }
 
-        const existingUser = await userModel
-            .findOne({ rollNo, roles })
-            .select("+password");
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                rollNo: Number(rollNo),
+                roles: roles
+            }
+        });
 
         if (!existingUser) {
             return res.status(404).json({
@@ -91,6 +95,7 @@ exports.login = async (req, res) => {
                 message: "User not found",
             });
         }
+
         const isPasswordValid = await doHashValidation(
             password,
             existingUser.password
@@ -105,7 +110,7 @@ exports.login = async (req, res) => {
 
         const token = jwt.sign(
             {
-                userId: existingUser._id,
+                userId: existingUser.id,
                 rollNo: existingUser.rollNo,
                 roles: existingUser.roles,
             },
@@ -123,7 +128,6 @@ exports.login = async (req, res) => {
             success: true,
             message: "User logged in successfully",
             token: token,
-            // optionally return token to client if needed
         });
     } catch (error) {
         console.log(error);
@@ -141,112 +145,6 @@ exports.signOut = async (req, res) => {
         message: "User signed out successfully",
     });
 };
-// exports.sendVerificationCode = async(req,res) =>{
-//     const {email} = req.body;
-//     try {
-//         const existingUser = await userModel.findOne({email})
-//         if(!existingUser){
-//             return res.status(404).json({
-//                 success : false,
-//                 message : "User not found"
-//             })
-//         }
-
-//         if(existingUser.verified){
-//             return res.status(400).json({
-//                 success : false,
-//                 message : "User already verified"
-//             })
-//         }
-
-//          const codeValue = Math.floor(Math.random() * 1000000).toString();
-//           let info = await transport.sendMail({
-//             from : process.env.EMAIL,
-//             to : existingUser.email,
-//             subject : "Verification Code",
-//             html : '<h1>'  + codeValue +'</h1>'
-
-//           });
-
-//           if(info.accepted[0] === existingUser.email){
-//                const hashedCodeValue = hmacProcess(
-//                 codeValue,
-//                 process.env.HMAC_KEY
-//                );
-//                 existingUser.verificationCode = hashedCodeValue;
-//                 existingUser.verificationCodeValidation = Date.now();
-//                 await existingUser.save();
-//                 return res.status(200).json({
-//                     success : true,
-//                     message : "Verification code sent successfully"
-//                 })
-//           }
-
-//     } catch (error) {
-//          console.log(error);
-//     }
-// };
-
-// exports.verifyVerificationCode = async(req,res) =>{
-//     const { email, provideCode} = req.body;
-//     try {
-
-//         const codeValue = providecode.toString();
-//         const existingUser = await userModel.findOne({email}).select(
-//             " +verificationCode +verificationCodeValidation"
-//         );
-//         if(!existingUser){
-//             return res.status(404).json({
-//                 success : false,
-//                 message : "User not found"
-//             })
-//             }
-
-//         if(existingUser.verified){
-//             return res.status(400).json({
-//                 success : false,
-//                 message : "User already verified"
-//             })
-//         }
-//          if(! existingUser.verificationCode || ! existingUser.verificationCodeValidation){
-//             return res.status(400).json({
-//                 success : false,
-//                 message : "Verification code not sent"
-//             })
-//          }
-
-//          if(Date.now() - existingUser.verificationCodeValidation > 5* 60 * 10000){
-//              return res.status(400).json({
-//                 success : false,
-//                 message : "Verification code expired"
-//             })
-//          }
-//           const hashedCodeValue = hmacProcess(
-//             codeValue,
-//             process.env.HMAC_KEY
-
-//           )
-
-//           if(hashedCodeValue  === existingUser.verificationCode){
-//             existingUser.verified = true;
-//             existingUser.verificationCode = undefined;
-//             existingUser.verificationCodeValidation = undefined;
-//             await existingUser.save();
-//             return res.status(200).json({
-//                 success : true,
-//                 message : "User verified successfully"
-//             })
-//           }
-
-//     } catch (error) {
-//          console.error(error);
-//          return res.status(500).json({
-//             success : false,
-//             message : "Internal server error"
-//             })
-
-//     }
-// }
 
 exports.changePassword = async (req, res) => {
     const { error } = changePasswordSchema.validate(req.body);
@@ -260,16 +158,10 @@ exports.changePassword = async (req, res) => {
     const { rollNo } = req.user;
     const { oldPassword, newPassword } = req.body;
     try {
-        // if(!verified){
-        //     return res.status(400).json({
-        //         success : false,
-        //         message : "User not verified"
-        //     })
-        // }
+        const existingUser = await prisma.user.findUnique({
+            where: { rollNo: Number(rollNo) }
+        });
 
-        const existingUser = await userModel
-            .findOne({ rollNo })
-            .select("+password");
         if (!existingUser) {
             return res.status(404).json({
                 success: false,
@@ -286,11 +178,13 @@ exports.changePassword = async (req, res) => {
             });
         }
 
-        const hashedpassword = await doHash(newPassword, 12);
+        const hashedPassword = await doHash(newPassword, 12);
 
-        existingUser.password = hashedpassword;
+        await prisma.user.update({
+            where: { id: existingUser.id },
+            data: { password: hashedPassword }
+        });
 
-        await existingUser.save();
         return res.status(200).json({
             success: true,
             message: "Password changed successfully",
@@ -303,6 +197,7 @@ exports.changePassword = async (req, res) => {
         });
     }
 };
+
 exports.sendForgotPasswordCode = async (req, res) => {
     const { error } = sendCOdeSchema.validate(req.body);
     if (error) {
@@ -315,9 +210,9 @@ exports.sendForgotPasswordCode = async (req, res) => {
     const { email } = req.body;
 
     try {
-        const exisitingUser = await userModel.findOne({ email });
+        const existingUser = await prisma.user.findUnique({ where: { email } });
 
-        if (!exisitingUser) {
+        if (!existingUser) {
             return res.status(404).json({
                 success: false,
                 message: "User not found",
@@ -327,19 +222,21 @@ exports.sendForgotPasswordCode = async (req, res) => {
         const codeValue = Math.floor(Math.random() * 1000000).toString();
         let info = await transport.sendMail({
             from: "naveenpandian68@gmail.com",
-            to: exisitingUser.email,
+            to: existingUser.email,
             subject: "Password Reset Code",
             html: "<h1>" + codeValue + "<h1>",
         });
 
-        if (info.accepted[0] === exisitingUser.email) {
+        if (info.accepted[0] === existingUser.email) {
             const hashedCodeValue = hmacProcess(codeValue, "123456");
 
-            exisitingUser.forgotPasswordCode = hashedCodeValue;
-
-            exisitingUser.forgotPasswordCodeValidation = Date.now();
-
-            await exisitingUser.save();
+            await prisma.user.update({
+                where: { id: existingUser.id },
+                data: {
+                    forgotPasswordCode: hashedCodeValue,
+                    forgotPasswordCodeValidation: new Date()
+                }
+            });
 
             res.status(200).json({
                 success: true,
@@ -369,9 +266,8 @@ exports.verifyForgotPasswordCode = async (req, res) => {
     try {
         const code = providedCode.toString();
 
-        const existingUser = await userModel
-            .findOne({ email })
-            .select("+forgotPasswordCode +forgotPasswordCodeValidation");
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+
         if (!existingUser) {
             return res.status(404).json({
                 success: false,
@@ -389,10 +285,9 @@ exports.verifyForgotPasswordCode = async (req, res) => {
             });
         }
 
-        if (
-            Date.now() - existingUser.forgotPasswordCodeValidation >
-            10 * 60 * 1000
-        ) {
+        const validationTime = existingUser.forgotPasswordCodeValidation.getTime();
+
+        if (Date.now() - validationTime > 10 * 60 * 1000) {
             return res.status(400).json({
                 success: false,
                 message: "Code expired",
@@ -404,13 +299,14 @@ exports.verifyForgotPasswordCode = async (req, res) => {
         if (hashedValue === existingUser.forgotPasswordCode) {
             const hashedPassword = await doHash(newPassword, 12);
 
-            existingUser.password = hashedPassword;
-
-            existingUser.forgotPasswordCode = undefined;
-
-            existingUser.forgotPasswordCodeValidation = undefined;
-
-            await existingUser.save();
+            await prisma.user.update({
+                where: { id: existingUser.id },
+                data: {
+                    password: hashedPassword,
+                    forgotPasswordCode: null,
+                    forgotPasswordCodeValidation: null
+                }
+            });
 
             return res.status(200).json({
                 success: true,
