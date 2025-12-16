@@ -126,8 +126,11 @@ export default function AdminPage() {
     setSaving(true);
 
     try {
-      const response = await fetch(`/api/admin/users/${editingUser.id}`, {
-        method: "PUT",
+      const method = editingUser.id ? "PUT" : "POST";
+      const url = editingUser.id ? `/api/admin/users/${editingUser.id}` : "/api/admin/users";
+
+      const response = await fetch(url, {
+        method: method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
@@ -167,7 +170,7 @@ export default function AdminPage() {
     return null;
   }
 
-  if (!profile || (profile.role !== "admin" && profile.role !== "manager")) {
+  if (!profile || (profile.role !== "admin" && profile.role !== "master")) {
     return (
       <div className="min-h-screen bg-[#121212] flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-[#1E1E1E] rounded-xl border border-[#333333] p-8 text-center">
@@ -175,7 +178,7 @@ export default function AdminPage() {
           <h1 className="text-2xl font-bold text-[#E5E5E5] mb-2">
             Access Denied
           </h1>
-          <p className="text-[#B0B0B0]">Admin or manager access required.</p>
+          <p className="text-[#B0B0B0]">Admin or master access required.</p>
         </div>
       </div>
     );
@@ -203,16 +206,37 @@ export default function AdminPage() {
         />
 
         <main className="p-4 md:p-6 lg:p-8">
-          <div className="mb-6">
-            <h1 className="text-[#E5E5E5] font-['Lato'] font-extrabold text-2xl sm:text-3xl mb-2">
-              {profile.role === "admin" ? "Admin Panel" : "User Management"}
-            </h1>
-            <p className="text-[#B0B0B0] text-sm">
-              {profile.role === "admin"
-                ? "Manage all user accounts across the system"
-                : "Manage users in your company"}
-            </p>
+          <div className="mb-6 flex justify-between items-center">
+            <div>
+              <h1 className="text-[#E5E5E5] font-['Lato'] font-extrabold text-2xl sm:text-3xl mb-2">
+                {profile.role === "admin" ? "Admin Panel" : "User Management"}
+              </h1>
+              <p className="text-[#B0B0B0] text-sm">
+                {profile.role === "admin"
+                  ? "Manage all user accounts across the system"
+                  : "Manage users in your company"}
+              </p>
+            </div>
+            {/* Create User Button */}
+            <button
+              onClick={() => {
+                setEditingUser({}); // Empty object signals "New User"
+                setFormData({
+                  name: "",
+                  email: "",
+                  role: "employee", // Default
+                  company_id: profile.company_id || "",
+                  location_id: ""
+                });
+              }}
+              className="flex items-center px-4 py-2 bg-[#4F8BFF] text-white rounded-lg hover:bg-[#3D6FE5] transition-colors"
+            >
+              <Plus size={20} className="mr-2" />
+              <span>Add User</span>
+            </button>
           </div>
+
+
 
           {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -301,13 +325,12 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-block px-2 py-1 text-xs rounded ${
-                              u.status === "approved"
-                                ? "bg-[#1A3A1A] text-[#4ADE80]"
-                                : u.status === "pending"
-                                  ? "bg-[#3A3A1A] text-[#FFFF00]"
-                                  : "bg-[#3A1A1A] text-[#FF6B6B]"
-                            }`}
+                            className={`inline-block px-2 py-1 text-xs rounded ${u.status === "approved"
+                              ? "bg-[#1A3A1A] text-[#4ADE80]"
+                              : u.status === "pending"
+                                ? "bg-[#3A3A1A] text-[#FFFF00]"
+                                : "bg-[#3A1A1A] text-[#FF6B6B]"
+                              }`}
                           >
                             {u.status}
                           </span>
@@ -365,7 +388,7 @@ export default function AdminPage() {
           <div className="bg-[#1E1E1E] rounded-xl border border-[#333333] w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-[#E5E5E5] text-xl font-bold">Edit User</h2>
+                <h2 className="text-[#E5E5E5] text-xl font-bold">{editingUser.id ? "Edit User" : "Create User"}</h2>
                 <button
                   onClick={handleCloseModal}
                   className="text-[#666666] hover:text-[#E5E5E5] transition-colors"
@@ -422,7 +445,7 @@ export default function AdminPage() {
                       required
                     >
                       <option value="employee">Employee</option>
-                      <option value="manager">Manager</option>
+                      <option value="master">Master</option>
                       {profile.role === "admin" && (
                         <option value="admin">Admin</option>
                       )}
