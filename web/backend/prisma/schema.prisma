@@ -1,3 +1,5 @@
+// This is your database schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,28 +9,374 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                    String   @id @default(uuid())
-  rollNo                Int      @unique
-  password              String
-  email                 String   @unique
-  roles                 Role     @default(student)
-  department            String?
-  classRoom             String?
-  Year                  String?
-  
-  verified              Boolean  @default(false)
-  verificationCode      String?
-  verificationCodeValidation DateTime?
-  forgotPasswordCode    String?
-  forgotPasswordCodeValidation DateTime?
+// ============================================
+// AUTHENTICATION & USERS
+// ============================================
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Hashed with Argon2
+  firstName String?
+  lastName  String?
+  role      UserRole @default(OPERATOR)
+  status    String   @default("active")
+  
+  company   Company @relation(fields: [companyId], references: [id])
+  companyId String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([companyId])
+  @@index([email])
 }
 
-enum Role {
-  student
-  staff
-  hod
+enum UserRole {
+  ADMIN
+  MANAGER
+  OPERATOR
+  AUDITOR
+  VENDOR
+}
+
+// ============================================
+// BUSINESS ENTITIES
+// ============================================
+
+model Company {
+  id       String    @id @default(uuid())
+  name     String
+  industry String    // "pharma", "food", "chemical"
+  
+  facilities  Facility[]
+  users       User[]
+  devices     Device[]
+  alerts      Alert[]
+  complianceReports ComplianceReport[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Facility {
+  id          String   @id @default(uuid())
+  name        String
+  location    String   // Address
+  coordinates String?  // lat,long
+  type        String   // "warehouse", "transport", "storage"
+  
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId   String
+  
+  devices     Device[]
+  serviceTickets ServiceTicket[]
+  complianceReports ComplianceReport[]
+  ervMetrics  ERVMetrics[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([companyId])
+}
+
+// ============================================
+// IOT DEVICES
+// ============================================
+
+model Device {
+  id           String   @id @default(uuid())
+  name         String
+  deviceId     String   @unique  // Physical device ID
+  type         String   // "temperature", "humidity", "door", "power"
+  status       String   @default("active")  // active, inactive, error
+  lastSeen     DateTime?
+  firmwareVersion String?
+  
+  facility     Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facilityId   String
+  
+  company      Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId    String
+  
+  // Sensor configuration
+  sensorData   SensorData[]
+  thresholds   Threshold[]
+  alerts       Alert[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([facilityId])
+  @@index([companyId])
+  @@index([deviceId])
+  @@index([status])
+}
+
+// ============================================
+// SENSOR DATA (TIME-SERIES)
+// ============================================
+
+model SensorData {
+  id        String   @id @default(uuid())
+  
+  deviceId  String
+  device    Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  
+  // Sensor readings
+  temperature  Float?
+  humidity     Float?
+  doorStatus   String?      // "open", "closed"
+  powerConsumption Float?
+  
+  // Metadata
+  timestamp    DateTime @default(now())
+  
+  createdAt DateTime @default(now())
+  
+  @@index([deviceId, timestamp])  // Critical for time-series queries
+  @@index([timestamp])
+}
+
+// ============================================
+// THRESHOLDS & ALERTS
+// ============================================
+
+model Threshold {
+  id        String   @id @default(uuid())
+  
+  device    Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId  String
+  
+  metricType    String    // "temperature", "humidity", "door", "power"
+  minValue      Float?
+  maxValue      Float?
+  
+  // Alert behavior
+  violationDuration Int @default(300) // 5 minutes in seconds
+  severity      String @default("warning")  // "warning", "critical"
+  
+  enabled   Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([deviceId])
+  @@unique([deviceId, metricType])
+}
+
+model Alert {
+  id        String   @id @default(uuid())
+  
+  device    Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId  String
+  
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  
+  // Alert details
+  title      String
+  message    String
+  severity   String  // "warning", "critical"
+  type       String  // "threshold_violation", "device_offline", "anomaly"
+  
+  // Status tracking
+  status     String @default("active")  // active, acknowledged, resolved
+  acknowledgedBy String?
+  acknowledgedAt DateTime?
+  resolvedAt DateTime?
+  
+  // Alert history
+  attempts   Int @default(0)
+  lastNotified DateTime?
+  notifications NotificationQueue[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([deviceId, status])
+  @@index([companyId, status])
+  @@index([createdAt])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model NotificationQueue {
+  id        String   @id @default(uuid())
+  
+  alert     Alert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  alertId   String
+  
+  // Notification details
+  channel    String  // "email", "sms", "push", "webhook"
+  recipient  String  // email address, phone, or webhook URL
+  
+  // Delivery status
+  status     String @default("pending")  // pending, sent, failed
+  retries    Int @default(0)
+  maxRetries Int @default(3)
+  
+  sentAt DateTime?
+  failureReason String?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([alertId, status])
+  @@index([status, createdAt])
+}
+
+// ============================================
+// REPORTS & COMPLIANCE
+// ============================================
+
+model ComplianceReport {
+  id        String   @id @default(uuid())
+  
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  
+  facility  Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facilityId String
+  
+  // Report details
+  reportType    String  // "daily", "weekly", "monthly", "audit"
+  industry      String  // "pharma", "food", "chemical"
+  
+  // Data
+  startDate    DateTime
+  endDate      DateTime
+  totalReadings Int
+  violationCount Int
+  downtime      Float?  // in hours
+  
+  // Compliance status
+  isCompliant  Boolean
+  remarks      String?
+  
+  // File storage
+  pdfUrl       String?
+  excelUrl     String?
+  
+  createdAt DateTime @default(now())
+  generatedAt DateTime @default(now())
+  
+  @@index([companyId, createdAt])
+  @@index([facilityId, createdAt])
+}
+
+// ============================================
+// SERVICE MANAGEMENT (For Cueron workflow)
+// ============================================
+
+model ServiceTicket {
+  id        String   @id @default(uuid())
+  
+  facility  Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facilityId String
+  
+  // Ticket details
+  title      String
+  description String
+  problemStatement String?
+  
+  // Equipment info
+  equipmentType String?
+  equipmentSerialNo String?
+  specificationPhotoUrl String?
+  
+  // Status
+  status     String @default("created")  // created, inspected, quoted, approved, scheduled, completed
+  
+  // Assignment
+  juniorEngineer String?
+  seniorEngineer String?
+  agencies   Agency[]
+  
+  // Quotation
+  quotationAmount Float?
+  quotationScenario String?  // "comprehensive_amc", "service_only", "no_amc"
+  
+  // Visit
+  visitDate  DateTime?
+  visitChargeAmount Float?
+  inspectionReportUrl String?
+  
+  // Completion
+  completionPhotos String[]  // JSON array of URLs
+  completionDate DateTime?
+  completionNotes String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([facilityId, status])
+  @@index([status])
+}
+
+model Agency {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String
+  location  String
+  experience Int?  // Years in operations
+  
+  tickets   ServiceTicket[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// ERV SYSTEM (Energy Recovery Ventilation)
+// ============================================
+
+model ERVMetrics {
+  id        String   @id @default(uuid())
+  
+  facility  Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facilityId String
+  
+  // Temperature readings
+  supplyTemp Float     // °C
+  exhaustTemp Float    // °C
+  
+  // Humidity readings
+  supplyHumidity Float   // %
+  exhaustHumidity Float  // %
+  
+  // Calculations
+  heatRecoveryEfficiency Float?   // %
+  moistureRecoveryEfficiency Float? // %
+  energySavings Float?  // kWh
+  costSavings Float?    // $
+  
+  timestamp DateTime @default(now())
+  
+  createdAt DateTime @default(now())
+  
+  @@index([facilityId, timestamp])
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  
+  userId    String?
+  action    String  // "create", "update", "delete", "acknowledge_alert"
+  entity    String  // "device", "alert", "threshold"
+  entityId  String
+  
+  oldValues String?  // JSON string
+  newValues String?  // JSON string
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, createdAt])
+  @@index([entityId])
 }
