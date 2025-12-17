@@ -9,15 +9,23 @@
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
+    "argon2": "^0.44.0",
     "bcryptjs": "^3.0.3",
+    "bull": "^4.16.5",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
     "express": "^4.21.2",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^6.10.0"
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "nodemailer": "^6.10.0",
+    "pdfkit": "^0.17.2",
+    "redis": "^5.10.0",
+    "socket.io": "^4.8.1"
   },
   "scripts": {
     "start": "node --env-file=.env index.js",
