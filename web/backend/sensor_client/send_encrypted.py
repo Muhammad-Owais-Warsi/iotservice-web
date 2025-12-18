@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import random
 
 # --- CONFIGURATION ---
-URL = "http://localhost:5000/api/sensors/ingest"
+URL = "https://secure-dashboard-kk3f.onrender.com/api/ingest/readings"
 SECRET = "9vA3xKp2nR8sL7qW4eY1zU6tH5mJ0cB2"
 DEVICE_ID = "sensor-001"
 SENSOR_ID = "550e8400-e29b-41d4-a716-446655440031"
