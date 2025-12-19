@@ -16,7 +16,7 @@ exports.identifer =
                 const decoded = jwt.verify(token, process.env.SECRET_KEY);
                 // ✅ Add this log to debug
 
-                if (roles.length && !roles.includes(decoded.roles)) {
+                if (roles.length && !roles.includes(decoded.role)) {
                     return res.status(403).json({
                         success: false,
                         message: "You do not have permission to access this resource",
