@@ -19,8 +19,9 @@ model User {
   password  String   // Hashed with Argon2
   firstName String?
   lastName  String?
-  role      UserRole @default(OPERATOR)
-  status    String   @default("active")
+  role      UserRole @default(EMPLOYEE)
+  status    String   @default("active") // active, suspended
+  isApproved Boolean @default(false)    // True for Admin-created Masters, needs approval for Master-created Employees
   
   company   Company @relation(fields: [companyId], references: [id])
   companyId String
@@ -34,10 +35,8 @@ model User {
 
 enum UserRole {
   ADMIN
-  MANAGER
-  OPERATOR
-  AUDITOR
-  VENDOR
+  MASTER
+  EMPLOYEE
 }
 
 // ============================================
@@ -275,18 +274,31 @@ model ServiceTicket {
   
   facility  Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   facilityId String
-  
-  // Ticket details
-  title      String
-  description String
-  problemStatement String?
-  
-  // Equipment info
+
+  // New requested fields
+  companyName String?
+  companyPhone String?
+  companyEmail String?
+  brandName    String?
+  yearsOfOperation Int?
+  location     String?
+  date         DateTime?
+  time         DateTime?
+  photos       String[]  // Array of URLs
+  gst          String?
+  billingAddress String?
   equipmentType String?
-  equipmentSerialNo String?
-  specificationPhotoUrl String?
-  
-  // Status
+  equipmentSlNo String?
+  capacity      Int?
+  specificationPlatePhoto String?
+  pocName      String?
+  pocPhone     String?
+  pocEmail     String?
+  problemStat  String?
+
+  // Existing/Internal fields
+  title      String?
+  description String?
   status     String @default("created")  // created, inspected, quoted, approved, scheduled, completed
   
   // Assignment
