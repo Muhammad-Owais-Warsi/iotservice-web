@@ -1,22 +1,21 @@
 const Joi = require("joi");
 
 exports.registerSchema = Joi.object({
-    rollNo: Joi.number().required(),
     email: Joi.string().min(6).max(60).required().email({
-        tlds: { allow: ["com", "net"] },
+        tlds: { allow: ["com", "net", "org", "in"] },
     }),
     password: Joi.string()
         .required()
         .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$")),
-    roles: Joi.string().valid("student", "staff", "hod").required()
+    role: Joi.string().valid("ADMIN", "MASTER", "EMPLOYEE").required(),
+    firstName: Joi.string().optional(),
+    lastName: Joi.string().optional(),
+    companyId: Joi.string().required()
 });
 
 exports.loginSchema = Joi.object({
-    rollNo: Joi.number().required(),
-    password: Joi.string()
-        .required()
-        .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$")),
-    roles: Joi.string().valid("student", "staff", "hod").required()
+    email: Joi.string().required().email(),
+    password: Joi.string().required()
 });
 
 exports.sendCOdeSchema = Joi.object({
