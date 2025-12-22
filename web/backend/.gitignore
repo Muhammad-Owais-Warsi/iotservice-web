@@ -34,3 +34,5 @@ BACKEND_EXPLANATION.md
 
 # Finder (MacOS) folder config
 .DS_Store
+
+.vercel
