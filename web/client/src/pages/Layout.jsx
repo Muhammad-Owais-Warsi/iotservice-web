@@ -9,7 +9,8 @@ import {
     BarChart2,
     Server,
     LogOut,
-    ChevronRight
+    ChevronRight,
+    Ticket
 } from 'lucide-react';
 
 function Layout() {
@@ -29,22 +30,23 @@ function Layout() {
         { path: '/alerts', label: 'Alert Center', icon: AlertTriangle },
         { path: '/analytics', label: 'Insights', icon: BarChart2 },
         { path: '/devices', label: 'Infrastructure', icon: Server },
+        { path: '/tickets', label: 'Ticketing', icon: Ticket },
     ];
 
     return (
-        <div className="flex h-screen overflow-hidden text-slate-100">
+        <div className="flex h-screen overflow-hidden text-slate-900">
             {/* Sidebar */}
             <motion.aside
                 initial={{ x: -280 }}
                 animate={{ x: 0 }}
-                className="w-72 glass-dark border-r border-white/5 flex flex-col z-50"
+                className="w-72 glass-dark border-r border-slate-200 flex flex-col z-50 shadow-xl shadow-blue-900/5"
             >
                 <div className="p-8">
                     <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                             <Activity className="text-white w-6 h-6" />
                         </div>
-                        <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                        <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-700">
                             ColdChain
                         </span>
                     </div>
@@ -60,16 +62,16 @@ function Layout() {
                                 <motion.div
                                     whileHover={{ x: 4 }}
                                     className={`group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 ${isActive
-                                            ? 'bg-blue-600/20 text-blue-400 border border-blue-500/20'
-                                            : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+                                        ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                                        : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50/50'
                                         }`}
                                 >
                                     <div className="flex items-center">
-                                        <Icon className={`w-5 h-5 mr-3 transition-colors ${isActive ? 'text-blue-400' : 'group-hover:text-blue-400'}`} />
+                                        <Icon className={`w-5 h-5 mr-3 transition-colors ${isActive ? 'text-blue-600' : 'group-hover:text-blue-600'}`} />
                                         <span className="font-medium">{item.label}</span>
                                     </div>
                                     {isActive && (
-                                        <motion.div layoutId="active" className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]" />
+                                        <motion.div layoutId="active" className="w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.4)]" />
                                     )}
                                 </motion.div>
                             </Link>
@@ -77,16 +79,16 @@ function Layout() {
                     })}
                 </nav>
 
-                <div className="p-6 mt-auto border-t border-white/5">
-                    <div className="flex items-center p-3 rounded-2xl bg-white/5 border border-white/5 mb-4 px-4 overflow-hidden">
+                <div className="p-6 mt-auto border-t border-slate-100">
+                    <div className="flex items-center p-3 rounded-2xl bg-slate-50 border border-slate-100 mb-4 px-4 overflow-hidden">
                         <div className="relative group cursor-pointer shrink-0">
-                            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full opacity-30 group-hover:opacity-100 transition duration-500 blur-sm"></div>
-                            <div className="relative w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-sm font-bold border border-white/10 shrink-0">
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full opacity-30 group-hover:opacity-100 transition duration-500 blur-sm"></div>
+                            <div className="relative w-10 h-10 rounded-full bg-white flex items-center justify-center text-sm font-bold border border-slate-200 shrink-0">
                                 {user?.name?.charAt(0) || 'U'}
                             </div>
                         </div>
                         <div className="ml-4 truncate">
-                            <p className="text-sm font-semibold text-white truncate">{user?.name || 'Demo User'}</p>
+                            <p className="text-sm font-semibold text-slate-800 truncate">{user?.name || 'Demo User'}</p>
                             <p className="text-xs text-slate-500 truncate">{user?.role || 'Admin'}</p>
                         </div>
                     </div>
@@ -94,7 +96,7 @@ function Layout() {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleLogout}
-                        className="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all border border-transparent hover:border-red-400/20"
+                        className="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100"
                     >
                         <LogOut className="w-4 h-4 mr-3" />
                         Sign Out
@@ -103,7 +105,7 @@ function Layout() {
             </motion.aside>
 
             {/* Main Content */}
-            <main className="flex-1 relative overflow-hidden flex flex-col">
+            <main className="flex-1 relative overflow-hidden flex flex-col bg-slate-50/30">
                 <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none"></div>
                 <div className="flex-1 overflow-auto custom-scrollbar relative">
                     <AnimatePresence mode="wait">
