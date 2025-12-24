@@ -89,7 +89,7 @@ const TicketCenter = () => {
     const [photoPreviews, setPhotoPreviews] = useState([]);
 
     // Fetch facilities for the dropdown
-    const fetchFacilities = async () => {
+    const fetchFacilities = React.useCallback(async () => {
         try {
             const token = localStorage.getItem('token');
             const response = await axios.get(`${API_URL}/api/devices`, {
@@ -98,7 +98,6 @@ const TicketCenter = () => {
 
             let facilitiesData = response.data.map(d => d.facility).filter((v, i, a) => a && v && a.findIndex(t => t && (t.id === v.id)) === i);
 
-            // Add mock data for testing if no facilities are found
             if (facilitiesData.length === 0) {
                 facilitiesData = [
                     { id: 'mock-1', name: 'Main Production Plant' },
@@ -111,7 +110,6 @@ const TicketCenter = () => {
             setFacilities(facilitiesData);
         } catch (error) {
             console.error('Error fetching facilities:', error);
-            // Fallback to mock data on error
             setFacilities([
                 { id: 'mock-1', name: 'Main Production Plant' },
                 { id: 'mock-2', name: 'West Wing Warehouse' },
@@ -119,29 +117,30 @@ const TicketCenter = () => {
                 { id: 'mock-4', name: 'Corporate Office' }
             ]);
         }
-    };
+    }, []);
 
     // Fetch tickets
-    const fetchTickets = async () => {
+    const fetchTickets = React.useCallback(async () => {
+        setLoading(true);
         try {
             const token = localStorage.getItem('token');
             const response = await axios.get(`${API_URL}/api/services`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setTickets(response.data);
-            setLoading(false);
         } catch (error) {
             console.error('Error fetching tickets:', error);
+        } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchTickets();
         fetchFacilities();
-    }, []);
+    }, [fetchTickets, fetchFacilities]);
 
-    const handlePhotoChange = (e) => {
+    const handlePhotoChange = React.useCallback((e) => {
         const files = Array.from(e.target.files);
         if (files.length + selectedPhotos.length > 5) {
             alert('Maximum 5 photos allowed');
@@ -152,14 +151,18 @@ const TicketCenter = () => {
 
         const newPreviews = files.map(file => URL.createObjectURL(file));
         setPhotoPreviews(prev => [...prev, ...newPreviews]);
-    };
+    }, [selectedPhotos.length]);
 
-    const removePhoto = (index) => {
+    const removePhoto = React.useCallback((index) => {
         setSelectedPhotos(prev => prev.filter((_, i) => i !== index));
-        setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
-    };
+        setPhotoPreviews(prev => {
+            const newPreviews = [...prev];
+            URL.revokeObjectURL(newPreviews[index]);
+            return newPreviews.filter((_, i) => i !== index);
+        });
+    }, []);
 
-    const handleCreateTicket = async (e) => {
+    const handleCreateTicket = React.useCallback(async (e) => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
@@ -186,9 +189,9 @@ const TicketCenter = () => {
         } catch (error) {
             console.error('Error creating ticket:', error);
         }
-    };
+    }, [newTicket, selectedPhotos, fetchTickets]);
 
-    const handleCloseTicket = async (ticketId) => {
+    const handleCloseTicket = React.useCallback(async (ticketId) => {
         try {
             const token = localStorage.getItem('token');
             await axios.patch(`${API_URL}/api/services/${ticketId}/close`, {}, {
@@ -198,7 +201,7 @@ const TicketCenter = () => {
         } catch (error) {
             console.error('Error closing ticket:', error);
         }
-    };
+    }, [fetchTickets]);
 
     const StatusBadge = ({ status }) => {
         const styles = {
