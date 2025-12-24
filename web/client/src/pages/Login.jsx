@@ -11,24 +11,31 @@ function Login() {
     const { setUser } = useContext(AuthContext);
     const navigate = useNavigate();
 
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
         try {
-            const mockUser = {
-                id: '1',
-                email: email,
-                name: 'Demo Principal',
-                role: 'ADMINISTRATOR'
-            };
+            const response = await fetch(`${API_URL}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
 
-            localStorage.setItem('token', 'mock-jwt-token');
-            setUser(mockUser);
-            navigate('/');
+            const data = await response.json();
 
+            if (data.success) {
+                localStorage.setItem('token', data.token);
+                setUser(data.user);
+                navigate('/');
+            } else {
+                setError(data.error || 'Login failed. Please check your credentials.');
+            }
         } catch (err) {
-            setError('Authentication failed. Access denied.');
+            console.error('Login error:', err);
+            setError('Unable to connect to security gateway.');
         }
     };
 
