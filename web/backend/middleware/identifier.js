@@ -13,6 +13,11 @@ exports.identifer =
                     token = token.split(" ")[1];
                 }
 
+                if (!token || token === 'null' || token === 'undefined') {
+                    console.error("❌ Token is missing or invalid string:", token);
+                    return res.status(400).json({ success: false, message: "Invalid token format" });
+                }
+
                 const decoded = jwt.verify(token, process.env.SECRET_KEY);
                 // ✅ Add this log to debug
 
@@ -26,7 +31,10 @@ exports.identifer =
                 req.user = decoded;
                 next();
             } catch (error) {
-                console.error("❌ Error in identifier middleware:", error);
+                console.error("❌ JWT Verification Error:", error.message);
+                if (!process.env.SECRET_KEY) {
+                    console.error("⚠️ SECRET_KEY is not defined in environment variables!");
+                }
                 return res.status(400).json({ success: false, message: "Invalid token" });
             }
         };
