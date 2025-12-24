@@ -10,7 +10,12 @@ import {
     AlertCircle,
     X,
     Upload,
-    ChevronDown
+    ChevronDown,
+    Calendar,
+    MapPin,
+    Camera,
+    Trash2,
+    Image
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import axios from 'axios';
@@ -238,171 +243,160 @@ const TicketCenter = () => {
     return (
         <div className="space-y-8">
             {/* Header section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Service Tickets</h1>
-                    <p className="text-slate-500 mt-1">Manage and track maintenance requests for your facilities.</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-1">
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight-head">
+                        Service Tickets
+                    </h1>
+                    <p className="text-slate-500 font-medium text-lg">
+                        Manage facility maintenance and support requests
+                    </p>
                 </div>
                 <motion.button
-                    whileHover={{ scale: 1.02 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="flex items-center justify-center px-5 py-2.5 bg-blue-600 text-white rounded-xl font-semibold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all"
+                    className="inline-flex items-center px-6 py-3.5 bg-slate-900 text-white rounded-2xl font-bold text-sm shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all gap-2"
                 >
-                    <Plus className="w-5 h-5 mr-2" />
+                    <Plus className="w-5 h-5" />
                     Raise New Ticket
                 </motion.button>
             </div>
 
-            {/* Filters and Search */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+            {/* Filters Banner */}
+            <div className="glass rounded-[2rem] p-4 flex flex-wrap items-center gap-4">
+                <div className="relative flex-1 min-w-[300px]">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                     <input
                         type="text"
-                        placeholder="Search tickets or facilities..."
+                        placeholder="Search by title or facility..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                        className="w-full pl-12 pr-4 py-3 bg-white rounded-xl border border-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-900/5 transition-all text-slate-900 font-medium placeholder:text-slate-400"
                     />
                 </div>
-                <div className="flex gap-2 bg-white p-1.5 border border-slate-200 rounded-2xl shadow-sm">
+
+                <div className="flex items-center gap-2 p-1.5 bg-slate-100/50 rounded-xl border border-slate-100">
                     {['all', 'open', 'closed'].map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilterStatus(status)}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${filterStatus === status
-                                ? 'bg-blue-50 text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:bg-slate-50'
+                            className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-all ${filterStatus === status
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                            {status}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Tickets Table/Grid */}
-            <div className="glass overflow-hidden rounded-2xl border border-slate-200 shadow-sm bg-white/50">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="border-b border-slate-100 bg-slate-50/50">
-                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ticket Details</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Facility</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Photos</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Raised On</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider"></th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {loading ? (
+            {/* Results Table */}
+            <div className="glass-card rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-slate-50/50 border-b border-slate-100">
                             <tr>
-                                <td colSpan="6" className="px-6 py-12 text-center text-slate-400">Loading tickets...</td>
+                                <th className="px-6 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">Service Item</th>
+                                <th className="px-6 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">Location</th>
+                                <th className="px-6 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">Visuals</th>
+                                <th className="px-6 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">Status</th>
+                                <th className="px-6 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">Activity</th>
+                                <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Control</th>
                             </tr>
-                        ) : filteredTickets.length === 0 ? (
-                            <tr>
-                                <td colSpan="6" className="px-6 py-12 text-center text-slate-400">No tickets found</td>
-                            </tr>
-                        ) : (
-                            filteredTickets.map((ticket) => (
-                                <tr key={ticket.id} className="hover:bg-slate-50/50 transition-colors group">
-                                    <td className="px-6 py-5">
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                                                {ticket.title || 'Untitled Ticket'}
-                                            </span>
-                                            <span className="text-xs text-slate-500 mt-1 line-clamp-1">
-                                                {ticket.description || 'No description provided'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center">
-                                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center mr-3">
-                                                <Filter className="w-4 h-4 text-blue-500" />
-                                            </div>
-                                            <span className="text-sm text-slate-600">{ticket.facility?.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="flex -space-x-2 overflow-hidden">
-                                            {ticket.photos?.slice(0, 3).map((photo, i) => (
-                                                <motion.img
-                                                    key={i}
-                                                    whileHover={{ y: -2, zIndex: 10 }}
-                                                    onClick={() => setSelectedImage(`${API_URL}${photo}`)}
-                                                    src={`${API_URL}${photo}`}
-                                                    className="inline-block h-8 w-8 rounded-lg ring-2 ring-white object-cover cursor-pointer"
-                                                    alt={`Ticket photo ${i + 1}`}
-                                                />
-                                            ))}
-                                            {ticket.photos?.length > 3 && (
-                                                <div className="flex items-center justify-center h-8 w-8 rounded-lg ring-2 ring-white bg-slate-100 text-[10px] font-bold text-slate-500">
-                                                    +{ticket.photos.length - 3}
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            <AnimatePresence mode="popLayout">
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-medium italic">
+                                            Loading registry...
+                                        </td>
+                                    </tr>
+                                ) : filteredTickets.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-medium">
+                                            No matches found for your current search criteria
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredTickets.map((ticket) => (
+                                        <motion.tr
+                                            key={ticket.id}
+                                            layout
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            className="group hover:bg-slate-50/50 transition-colors"
+                                        >
+                                            <td className="px-6 py-5">
+                                                <div className="space-y-1">
+                                                    <div className="font-bold text-slate-900 group-hover:text-black transition-colors">
+                                                        {ticket.title}
+                                                    </div>
+                                                    <div className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
+                                                        <Calendar className="w-3.5 h-3.5" />
+                                                        {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : 'N/A'}
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <StatusBadge status={ticket.status} />
-                                    </td>
-                                    <td className="px-6 py-5 text-sm text-slate-500">
-                                        {new Date(ticket.createdAt).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-5 text-right">
-                                        <div className="flex items-center justify-end space-x-2">
-                                            {ticket.status !== 'closed' && (
-                                                <button
-                                                    onClick={() => handleCloseTicket(ticket.id)}
-                                                    className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                                                    title="Mark as Resolved"
-                                                >
-                                                    <CheckCircle2 className="w-5 h-5" />
-                                                </button>
-                                            )}
-                                            <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-                                                <MoreVertical className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="flex items-center gap-2 text-slate-600 font-semibold">
+                                                    <MapPin className="w-4 h-4 text-slate-400" />
+                                                    {ticket.facility?.name || 'N/A'}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="flex -space-x-2">
+                                                    {ticket.photos?.slice(0, 3).map((photo, i) => (
+                                                        <motion.img
+                                                            key={i}
+                                                            whileHover={{ y: -4, zIndex: 10, scale: 1.1 }}
+                                                            onClick={() => setSelectedImage(`${API_URL}${photo}`)}
+                                                            src={`${API_URL}${photo}`}
+                                                            className="inline-block h-10 w-10 rounded-xl ring-2 ring-white object-cover cursor-pointer shadow-sm"
+                                                            alt="Ticket"
+                                                        />
+                                                    ))}
+                                                    {ticket.photos?.length > 3 && (
+                                                        <div className="flex items-center justify-center h-10 w-10 rounded-xl ring-2 ring-white bg-slate-100 text-[11px] font-black text-slate-600 shadow-sm">
+                                                            +{ticket.photos.length - 3}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <StatusBadge status={ticket.status} />
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="text-xs font-black text-slate-400 uppercase tracking-wider">
+                                                    {ticket.status === 'closed' ? 'Archived' : 'Active Channel'}
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5 text-right">
+                                                {ticket.status !== 'closed' ? (
+                                                    <button
+                                                        onClick={() => handleCloseTicket(ticket.id)}
+                                                        className="inline-flex items-center gap-1.5 px-4 py-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-all font-bold text-sm"
+                                                    >
+                                                        <CheckCircle2 className="w-4 h-4" />
+                                                        Close
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-slate-300">Closed</span>
+                                                )}
+                                            </td>
+                                        </motion.tr>
+                                    ))
+                                )}
+                            </AnimatePresence>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {/* Photo Viewer Modal */}
-            <AnimatePresence>
-                {selectedImage && (
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setSelectedImage(null)}
-                            className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="relative max-w-4xl w-full flex items-center justify-center"
-                        >
-                            <img src={selectedImage} alt="Enlarged" className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden" />
-                            <button
-                                onClick={() => setSelectedImage(null)}
-                                className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-all"
-                            >
-                                <X className="w-8 h-8" />
-                            </button>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {/* Create Ticket Modal - Simplified for now */}
+            {/* Create Ticket Modal */}
             <AnimatePresence>
                 {isCreateModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -411,99 +405,154 @@ const TicketCenter = () => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsCreateModalOpen(false)}
-                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100"
                         >
-                            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                                <h3 className="text-lg font-bold text-slate-900">Raise New Ticket</h3>
+                            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                                <div className="space-y-1">
+                                    <h2 className="text-2xl font-black text-slate-900 tracking-tight-head">New Service Request</h2>
+                                    <p className="text-slate-500 font-medium text-sm text-balance">Fill in the details below to initiate a maintenance ticket</p>
+                                </div>
                                 <button
                                     onClick={() => setIsCreateModalOpen(false)}
-                                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-full transition-all"
+                                    className="p-3 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all"
                                 >
-                                    <X className="w-5 h-5" />
+                                    <X className="w-6 h-6" />
                                 </button>
                             </div>
 
-                            <form className="p-6 space-y-5" onSubmit={handleCreateTicket}>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Ticket Title</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={newTicket.title}
-                                        onChange={(e) => setNewTicket({ ...newTicket, title: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                                        placeholder="e.g., Sensor malfunction in Zone A"
-                                    />
+                            <form onSubmit={handleCreateTicket} className="p-8 space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Ticket Heading</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            placeholder="Brief issue title..."
+                                            value={newTicket.title}
+                                            onChange={(e) => setNewTicket({ ...newTicket, title: e.target.value })}
+                                            className="w-full px-5 py-4 bg-slate-50/50 rounded-2xl border border-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-900/5 transition-all text-slate-900 font-medium"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Asset Location</label>
+                                        <FacilityDropdown
+                                            facilities={facilities}
+                                            selectedId={newTicket.facilityId}
+                                            onSelect={(id) => setNewTicket({ ...newTicket, facilityId: id })}
+                                        />
+                                    </div>
                                 </div>
 
-                                <FacilityDropdown
-                                    facilities={facilities}
-                                    value={newTicket.facilityId}
-                                    onChange={(id) => setNewTicket({ ...newTicket, facilityId: id })}
-                                />
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Description</label>
+                                <div className="space-y-3">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Detailed Description</label>
                                     <textarea
                                         required
+                                        rows="4"
+                                        placeholder="Explain the maintenance requirements or reported anomaly..."
                                         value={newTicket.description}
                                         onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all h-28 resize-none"
-                                        placeholder="Describe the issue in detail..."
-                                    />
+                                        className="w-full px-5 py-4 bg-slate-50/50 rounded-2xl border border-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-900/5 transition-all text-slate-900 font-medium resize-none"
+                                    ></textarea>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Photos (Max 5)</label>
-                                    <div className="flex flex-wrap gap-3 mb-2">
-                                        {photoPreviews.map((preview, index) => (
-                                            <div key={index} className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-200 group shadow-sm">
-                                                <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removePhoto(index)}
-                                                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">
+                                            Evidence & Photos ({selectedPhotos.length}/5)
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => document.getElementById('photo-upload').click()}
+                                            className="text-sm font-bold text-slate-900 hover:underline flex items-center gap-1.5"
+                                        >
+                                            <Camera className="w-4 h-4" />
+                                            Attach File
+                                        </button>
+                                    </div>
+
+                                    <input
+                                        id="photo-upload"
+                                        type="file"
+                                        multiple
+                                        accept="image/*"
+                                        onChange={handlePhotoChange}
+                                        className="hidden"
+                                    />
+
+                                    <div className="flex flex-wrap gap-4 min-h-[100px] p-6 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200">
+                                        {photoPreviews.length === 0 ? (
+                                            <div className="w-full flex flex-col items-center justify-center text-slate-400 py-4">
+                                                <Image className="w-8 h-8 mb-2 opacity-50" />
+                                                <p className="text-xs font-medium uppercase tracking-widest">No visuals attached</p>
                                             </div>
-                                        ))}
-                                        {photoPreviews.length < 5 && (
-                                            <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all group">
-                                                <Upload className="w-6 h-6 text-slate-400 group-hover:text-blue-500 mb-1" />
-                                                <span className="text-[10px] font-bold text-slate-400 group-hover:text-blue-500 uppercase tracking-wider">Add Photo</span>
-                                                <input
-                                                    type="file"
-                                                    multiple
-                                                    accept="image/*"
-                                                    onChange={handlePhotoChange}
-                                                    className="hidden"
-                                                />
-                                            </label>
+                                        ) : (
+                                            photoPreviews.map((preview, index) => (
+                                                <motion.div
+                                                    key={index}
+                                                    initial={{ opacity: 0, scale: 0.8 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    className="relative group h-24 w-24 rounded-2xl overflow-hidden shadow-lg"
+                                                >
+                                                    <img src={preview} alt="Preview" className="h-full w-full object-cover" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removePhoto(index)}
+                                                        className="absolute top-2 right-2 p-1.5 bg-white shadow-xl text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </motion.div>
+                                            ))
                                         )}
                                     </div>
                                 </div>
-                                <div className="pt-4 flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsCreateModalOpen(false)}
-                                        className="flex-1 px-4 py-3.5 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="flex-1 px-4 py-3.5 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition-all active:scale-[0.98]"
-                                    >
-                                        Submit Ticket
-                                    </button>
-                                </div>
+
+                                <motion.button
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.99 }}
+                                    type="submit"
+                                    className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-slate-900/20 hover:bg-slate-800 transition-all mt-4"
+                                >
+                                    Initialize Ticket Chain
+                                </motion.button>
                             </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Image Viewer Modal */}
+            <AnimatePresence>
+                {selectedImage && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedImage(null)}
+                            className="absolute inset-0 bg-slate-900/95 backdrop-blur-xl"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                            transition={{ type: "spring", damping: 25 }}
+                            className="relative max-w-5xl w-full flex items-center justify-center pointer-events-none"
+                        >
+                            <img src={selectedImage} alt="Enlarged Visual" className="max-w-full max-h-[85vh] rounded-3xl shadow-2xl ring-1 ring-white/10 pointer-events-auto" />
+                            <button
+                                onClick={() => setSelectedImage(null)}
+                                className="absolute -top-16 right-0 p-4 text-white/50 hover:text-white transition-all pointer-events-auto hover:rotate-90 transition-transform duration-300"
+                            >
+                                <X className="w-10 h-10" />
+                            </button>
                         </motion.div>
                     </div>
                 )}
