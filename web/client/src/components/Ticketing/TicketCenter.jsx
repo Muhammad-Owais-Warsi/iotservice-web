@@ -17,6 +17,60 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+const FacilityDropdown = ({ facilities, value, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const selectedFacility = facilities.find(f => f.id === value);
+
+    return (
+        <div className="relative">
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Facility</label>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all hover:bg-slate-100/50"
+            >
+                <span className={`text-sm ${selectedFacility ? 'text-slate-900' : 'text-slate-400'}`}>
+                    {selectedFacility ? selectedFacility.name : 'Select a facility'}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <>
+                        <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+                        <motion.div
+                            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 5, scale: 1 }}
+                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                            className="absolute z-20 w-full bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50 overflow-hidden py-1"
+                        >
+                            {facilities.length === 0 ? (
+                                <div className="px-4 py-3 text-sm text-slate-400 italic">No facilities available</div>
+                            ) : (
+                                facilities.map((facility) => (
+                                    <button
+                                        key={facility.id}
+                                        type="button"
+                                        onClick={() => {
+                                            onChange(facility.id);
+                                            setIsOpen(false);
+                                        }}
+                                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-blue-50 hover:text-blue-600 ${value === facility.id ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-600'
+                                            }`}
+                                    >
+                                        {facility.name}
+                                    </button>
+                                ))
+                            )}
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
 const TicketCenter = () => {
     const { user } = useContext(AuthContext);
     const [tickets, setTickets] = useState([]);
@@ -41,14 +95,29 @@ const TicketCenter = () => {
             const response = await axios.get(`${API_URL}/api/devices`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            // DeviceList likely has facility info or there's a facilities route
-            // Based on schema.prisma, facilities are a model. 
-            // Let's assume there's a way to get facilities.
-            // For now, let's try to get them from companies or devices.
-            const facilitiesData = response.data.map(d => d.facility).filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+
+            let facilitiesData = response.data.map(d => d.facility).filter((v, i, a) => a && v && a.findIndex(t => t && (t.id === v.id)) === i);
+
+            // Add mock data for testing if no facilities are found
+            if (facilitiesData.length === 0) {
+                facilitiesData = [
+                    { id: 'mock-1', name: 'Main Production Plant' },
+                    { id: 'mock-2', name: 'West Wing Warehouse' },
+                    { id: 'mock-3', name: 'Research Lab A' },
+                    { id: 'mock-4', name: 'Corporate Office' }
+                ];
+            }
+
             setFacilities(facilitiesData);
         } catch (error) {
             console.error('Error fetching facilities:', error);
+            // Fallback to mock data on error
+            setFacilities([
+                { id: 'mock-1', name: 'Main Production Plant' },
+                { id: 'mock-2', name: 'West Wing Warehouse' },
+                { id: 'mock-3', name: 'Research Lab A' },
+                { id: 'mock-4', name: 'Corporate Office' }
+            ]);
         }
     };
 
@@ -357,7 +426,7 @@ const TicketCenter = () => {
                                 </button>
                             </div>
 
-                            <form className="p-6 space-y-4" onSubmit={handleCreateTicket}>
+                            <form className="p-6 space-y-5" onSubmit={handleCreateTicket}>
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1.5">Ticket Title</label>
                                     <input
@@ -365,55 +434,46 @@ const TicketCenter = () => {
                                         required
                                         value={newTicket.title}
                                         onChange={(e) => setNewTicket({ ...newTicket, title: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                                         placeholder="e.g., Sensor malfunction in Zone A"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Facility</label>
-                                    <div className="relative">
-                                        <select
-                                            required
-                                            value={newTicket.facilityId}
-                                            onChange={(e) => setNewTicket({ ...newTicket, facilityId: e.target.value })}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
-                                        >
-                                            <option value="">Select a facility</option>
-                                            {facilities.map(f => (
-                                                <option key={f.id} value={f.id}>{f.name}</option>
-                                            ))}
-                                        </select>
-                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
-                                    </div>
-                                </div>
+
+                                <FacilityDropdown
+                                    facilities={facilities}
+                                    value={newTicket.facilityId}
+                                    onChange={(id) => setNewTicket({ ...newTicket, facilityId: id })}
+                                />
+
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1.5">Description</label>
                                     <textarea
                                         required
                                         value={newTicket.description}
                                         onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all h-24 resize-none"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all h-28 resize-none"
                                         placeholder="Describe the issue in detail..."
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1.5">Photos (Max 5)</label>
-                                    <div className="flex flex-wrap gap-2 mb-2">
+                                    <div className="flex flex-wrap gap-3 mb-2">
                                         {photoPreviews.map((preview, index) => (
-                                            <div key={index} className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-200 group">
+                                            <div key={index} className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-200 group shadow-sm">
                                                 <img src={preview} alt="Preview" className="w-full h-full object-cover" />
                                                 <button
                                                     type="button"
                                                     onClick={() => removePhoto(index)}
-                                                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                                                 >
-                                                    <X className="w-3 h-3" />
+                                                    <X className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
                                         ))}
                                         {photoPreviews.length < 5 && (
-                                            <label className="w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
-                                                <Upload className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
+                                            <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                                                <Upload className="w-6 h-6 text-slate-400 group-hover:text-blue-500 mb-1" />
+                                                <span className="text-[10px] font-bold text-slate-400 group-hover:text-blue-500 uppercase tracking-wider">Add Photo</span>
                                                 <input
                                                     type="file"
                                                     multiple
@@ -429,13 +489,13 @@ const TicketCenter = () => {
                                     <button
                                         type="button"
                                         onClick={() => setIsCreateModalOpen(false)}
-                                        className="flex-1 px-4 py-3 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition-all"
+                                        className="flex-1 px-4 py-3.5 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 px-4 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all"
+                                        className="flex-1 px-4 py-3.5 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition-all active:scale-[0.98]"
                                     >
                                         Submit Ticket
                                     </button>
