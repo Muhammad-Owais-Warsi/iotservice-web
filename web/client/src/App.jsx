@@ -12,6 +12,7 @@ import SensorMonitor from './components/Sensors/SensorMonitor';
 import AlertCenter from './components/Alerts/AlertCenter';
 import Analytics from './components/Analytics/Analytics';
 import DeviceList from './components/Devices/DeviceList';
+import TicketCenter from './components/Ticketing/TicketCenter';
 
 function App() {
   const [authUser, setAuthUser] = useState(null);
@@ -85,6 +86,7 @@ function App() {
                 <Route path="/alerts" element={<AlertCenter />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/devices" element={<DeviceList />} />
+                <Route path="/tickets" element={<TicketCenter />} />
               </Route>
             ) : (
               <Route path="*" element={<Navigate to="/login" />} />
