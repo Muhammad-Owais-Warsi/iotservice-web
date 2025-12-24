@@ -2,20 +2,25 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../utils/prismaClient');
 const { identifer } = require('../middleware/identifier');
+const upload = require('../middleware/upload');
 
 // ============================================
 // RAISE TICKET (Admin, Master, Employee)
 // ============================================
-router.post('/', identifer(['ADMIN', 'MASTER', 'EMPLOYEE']), async (req, res) => {
+router.post('/', identifer(['ADMIN', 'MASTER', 'EMPLOYEE']), upload.array('photos', 5), async (req, res) => {
     try {
         const ticketData = req.body;
+
+        // Extract photo URLs if files were uploaded
+        const photos = req.files ? req.files.map(file => `/uploads/tickets/${file.filename}`) : [];
 
         const ticket = await prisma.serviceTicket.create({
             data: {
                 ...ticketData,
-                facilityId: ticketData.facilityId, // Must be provided
+                facilityId: ticketData.facilityId,
                 date: ticketData.date ? new Date(ticketData.date) : null,
                 time: ticketData.time ? new Date(ticketData.time) : null,
+                photos: photos,
                 status: 'open'
             }
         });
