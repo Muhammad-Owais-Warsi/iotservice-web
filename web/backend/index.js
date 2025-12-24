@@ -29,6 +29,7 @@ app.use(express.json({
     }
 }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use('/uploads', express.static('uploads'));
 
 // ============================================
 // SOCKET.IO CONNECTION
