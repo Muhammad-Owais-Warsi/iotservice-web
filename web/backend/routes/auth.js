@@ -25,7 +25,7 @@ router.post('/login', async (req, res) => {
         }
 
         // Check if approved (for Masters and Employees)
-        if (!user.isApproved && user.role !== 'ADMIN') {
+        if (!user.isApproved && user.role !== 'CUERON_ADMIN' && user.role !== 'CUERON_EMPLOYEE') {
             return res.status(403).json({ error: 'Your account is pending approval by the Admin.' });
         }
 
@@ -58,7 +58,7 @@ router.post('/login', async (req, res) => {
 // ============================================
 // REGISTER MASTER (Admin Only)
 // ============================================
-router.post('/register-master', identifer(['ADMIN']), async (req, res) => {
+router.post('/register-master', identifer(['CUERON_ADMIN']), async (req, res) => {
     try {
         const { email, password, firstName, lastName, companyId } = req.body;
 
@@ -122,7 +122,7 @@ router.post('/register-employee', identifer(['MASTER']), async (req, res) => {
 // ============================================
 // APPROVE EMPLOYEE (Admin Only)
 // ============================================
-router.post('/approve/:id', identifer(['ADMIN']), async (req, res) => {
+router.post('/approve/:id', identifer(['CUERON_ADMIN']), async (req, res) => {
     try {
         const { id } = req.params;
         await prisma.user.update({
@@ -138,7 +138,7 @@ router.post('/approve/:id', identifer(['ADMIN']), async (req, res) => {
 // ============================================
 // SUSPEND USER (Admin or Master)
 // ============================================
-router.post('/suspend/:id', identifer(['ADMIN', 'MASTER']), async (req, res) => {
+router.post('/suspend/:id', identifer(['CUERON_ADMIN', 'MASTER']), async (req, res) => {
     try {
         const { id } = req.params;
         const targetUser = await prisma.user.findUnique({ where: { id } });
