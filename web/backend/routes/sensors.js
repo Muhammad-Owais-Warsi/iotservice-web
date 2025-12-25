@@ -2,6 +2,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const hmacService = require('../services/hmacService');
 const alertService = require('../services/alertService');
+const { identifer } = require('../middleware/identifier');
 
 const prisma = new PrismaClient();
 
@@ -10,15 +11,10 @@ module.exports = (io) => {
 
     /**
      * POST /api/sensors/ingest
-     * 
-     * Receives encrypted sensor data from IoT devices
-     * Verifies HMAC signature before storing
+     * (Unprotected by identifier as it uses HMAC signature for device auth)
      */
     router.post('/ingest', async (req, res) => {
         try {
-            // ============================================
-            // STEP 1: Extract headers
-            // ============================================
             const deviceId = req.headers['x-device-id'];
             const timestamp = req.headers['x-timestamp'];
             const receivedSignature = req.headers['x-signature'];
@@ -29,27 +25,13 @@ module.exports = (io) => {
                 });
             }
 
-            // ============================================
-            // STEP 2: Verify HMAC signature (CRITICAL!)
-            // ============================================
             const rawBody = req.rawBody;
             const isValid = hmacService.verifySignature(rawBody, timestamp, receivedSignature);
 
             if (!isValid) {
-                console.error('❌ HMAC verification failed');
-                console.error('Expected signature from request:', receivedSignature);
-                console.error('Device ID:', deviceId);
-                return res.status(401).json({
-                    error: 'HMAC_VALIDATION_FAILED',
-                    message: 'Invalid signature'
-                });
+                return res.status(401).json({ error: 'HMAC_VALIDATION_FAILED', message: 'Invalid signature' });
             }
 
-            console.log(`✅ HMAC verified for device: ${deviceId}`);
-
-            // ============================================
-            // STEP 3: Parse JSON
-            // ============================================
             const data = JSON.parse(rawBody);
             const readings = data.readings || [];
 
@@ -57,23 +39,15 @@ module.exports = (io) => {
                 return res.status(400).json({ error: 'No readings provided' });
             }
 
-            // ============================================
-            // STEP 4: Find device in database
-            // ============================================
             const device = await prisma.device.findUnique({
-                where: { deviceId }
+                where: { deviceId },
+                include: { company: true }
             });
 
             if (!device) {
-                return res.status(404).json({
-                    error: 'Device not found',
-                    deviceId
-                });
+                return res.status(404).json({ error: 'Device not found', deviceId });
             }
 
-            // ============================================
-            // STEP 5: Store sensor data
-            // ============================================
             const storedReadings = [];
 
             for (const reading of readings) {
@@ -89,54 +63,40 @@ module.exports = (io) => {
                 });
 
                 storedReadings.push(sensorData);
-
-                // ============================================
-                // STEP 6: Check thresholds & create alerts
-                // ============================================
                 await alertService.checkThresholds(device, reading);
             }
 
-            // ============================================
-            // STEP 7: Update device last seen
-            // ============================================
             await prisma.device.update({
                 where: { id: device.id },
                 data: { lastSeen: new Date() }
             });
 
-            // ============================================
-            // STEP 8: Broadcast real-time update via Socket.io
-            // ============================================
+            // Broadcast real-time update
             io.to(`device-${deviceId}`).emit('sensor-update', {
                 deviceId,
                 readings: storedReadings,
                 timestamp: new Date()
             });
 
-            // ============================================
-            // STEP 9: Response
-            // ============================================
-            res.status(200).json({
-                success: true,
-                message: `${readings.length} readings ingested successfully`,
+            // Also broadcast to company room
+            io.to(`company-${device.companyId}`).emit('sensor-update', {
                 deviceId,
-                count: readings.length
+                companyId: device.companyId,
+                readings: storedReadings,
+                timestamp: new Date()
             });
 
+            res.status(200).json({ success: true, count: readings.length });
+
         } catch (error) {
-            console.error('❌ Ingest error:', error.message);
-            res.status(500).json({
-                error: 'Sensor ingestion failed',
-                details: error.message
-            });
+            res.status(500).json({ error: 'Sensor ingestion failed', details: error.message });
         }
     });
 
     /**
      * GET /api/sensors/current/:deviceId
-     * Get latest sensor reading for a device
      */
-    router.get('/current/:deviceId', async (req, res) => {
+    router.get('/current/:deviceId', identifer(), async (req, res) => {
         try {
             const { deviceId } = req.params;
 
@@ -146,6 +106,13 @@ module.exports = (io) => {
 
             if (!device) {
                 return res.status(404).json({ error: 'Device not found' });
+            }
+
+            // Authorization: CUERON_ADMIN can see any; others only their company
+            if (req.user.role !== 'CUERON_ADMIN' && req.user.role !== 'CUERON_EMPLOYEE') {
+                if (device.companyId !== req.user.companyId) {
+                    return res.status(403).json({ error: 'You do not have permission to view this device data' });
+                }
             }
 
             const latestReading = await prisma.sensorData.findFirst({
@@ -162,9 +129,8 @@ module.exports = (io) => {
 
     /**
      * GET /api/sensors/history/:deviceId
-     * Get sensor history with optional time range
      */
-    router.get('/history/:deviceId', async (req, res) => {
+    router.get('/history/:deviceId', identifer(), async (req, res) => {
         try {
             const { deviceId } = req.params;
             const { startDate, endDate, limit = 100 } = req.query;
@@ -175,6 +141,13 @@ module.exports = (io) => {
 
             if (!device) {
                 return res.status(404).json({ error: 'Device not found' });
+            }
+
+            // Authorization
+            if (req.user.role !== 'CUERON_ADMIN' && req.user.role !== 'CUERON_EMPLOYEE') {
+                if (device.companyId !== req.user.companyId) {
+                    return res.status(403).json({ error: 'You do not have permission to view this history' });
+                }
             }
 
             const whereClause = { deviceId: device.id };
@@ -197,5 +170,30 @@ module.exports = (io) => {
         }
     });
 
+    /**
+     * GET /api/sensors/company/:companyId
+     * Admin view to get all sensors for a specific client
+     */
+    router.get('/company/:companyId', identifer(['CUERON_ADMIN', 'CUERON_EMPLOYEE']), async (req, res) => {
+        try {
+            const { companyId } = req.params;
+
+            const devicesWithData = await prisma.device.findMany({
+                where: { companyId },
+                include: {
+                    sensorData: {
+                        orderBy: { timestamp: 'desc' },
+                        take: 1
+                    }
+                }
+            });
+
+            res.json({ success: true, devices: devicesWithData });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    });
+
     return router;
 };
+
