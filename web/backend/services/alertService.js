@@ -97,7 +97,7 @@ class AlertService {
         }
         // 30 mins: Admin
         else if (durationMinutes >= 30 && alert.attempts === 2) {
-            await this.escalate(alert, 'ADMIN', 'Admin');
+            await this.escalate(alert, 'CUERON_ADMIN', 'Admin');
             await prisma.alert.update({ where: { id: alert.id }, data: { attempts: 3 } });
         }
     }
@@ -110,7 +110,7 @@ class AlertService {
             const users = await prisma.user.findMany({
                 where: {
                     role: role,
-                    companyId: role === 'ADMIN' ? undefined : alert.companyId,
+                    companyId: (role === 'CUERON_ADMIN' || role === 'CUERON_EMPLOYEE') ? undefined : alert.companyId,
                     status: 'active'
                 }
             });
