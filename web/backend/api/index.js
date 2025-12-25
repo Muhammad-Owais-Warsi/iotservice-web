@@ -65,6 +65,7 @@ const deviceRoutes = require('../routes/devices');
 const analyticsRoutes = require('../routes/analytics');
 const reportRoutes = require('../routes/reports');
 const serviceRoutes = require('../routes/services');
+const usersRoutes = require('../routes/users');
 
 // ============================================
 // ROUTE MOUNTING
@@ -77,6 +78,7 @@ app.use('/api/devices', deviceRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/services', serviceRoutes);
+app.use('/api/users', usersRoutes);
 
 // ============================================
 // HEALTH CHECK
