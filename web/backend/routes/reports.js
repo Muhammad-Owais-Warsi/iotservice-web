@@ -3,16 +3,32 @@ const { PrismaClient } = require('@prisma/client');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 
+const { identifer } = require('../middleware/identifier');
+
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = new (require('@prisma/client').PrismaClient)();
 
 /**
  * GET /api/reports/:type/:facilityId
  * types: today, last7days, last30days
  */
-router.get('/:type/:facilityId', async (req, res) => {
+router.get('/:type/:facilityId', identifer(), async (req, res) => {
     try {
         const { type, facilityId } = req.params;
+
+        // Security: Verify facility belongs to user's company
+        const facility = await prisma.facility.findUnique({
+            where: { id: facilityId }
+        });
+
+        if (!facility) return res.status(404).json({ error: 'Facility not found' });
+
+        if (req.user.role !== 'CUERON_ADMIN' && req.user.role !== 'CUERON_EMPLOYEE') {
+            if (facility.companyId !== req.user.companyId) {
+                return res.status(403).json({ error: 'Unauthorized: Facility belongs to another company' });
+            }
+        }
+
         const { format = 'pdf' } = req.query;
 
         let startDate = new Date();
