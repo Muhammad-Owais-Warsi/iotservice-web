@@ -7,27 +7,44 @@ const upload = require('../middleware/upload');
 // ============================================
 // RAISE TICKET (Admin, Master, Employee)
 // ============================================
-router.post('/', identifer(['ADMIN', 'MASTER', 'EMPLOYEE']), upload.array('photos', 5), async (req, res) => {
+router.post('/', identifer(['CUERON_ADMIN', 'CUERON_EMPLOYEE', 'MASTER', 'EMPLOYEE']), upload.array('photos', 5), async (req, res) => {
     try {
         const ticketData = req.body;
 
         // Extract photo URLs if files were uploaded
         const photos = req.files ? req.files.map(file => `/uploads/tickets/${file.filename}`) : [];
 
+        // Automation: Ensure correct company association for clients
+        let targetFacilityId = ticketData.facilityId;
+
+        const facility = await prisma.facility.findUnique({
+            where: { id: targetFacilityId }
+        });
+
+        if (!facility) return res.status(404).json({ error: 'Facility not found' });
+
+        // Security check for non-admins
+        if (req.user.role !== 'CUERON_ADMIN' && req.user.role !== 'CUERON_EMPLOYEE') {
+            if (facility.companyId !== req.user.companyId) {
+                return res.status(403).json({ error: 'Permission denied: Facility belongs to another company' });
+            }
+        }
+
         const ticket = await prisma.serviceTicket.create({
             data: {
                 ...ticketData,
-                facilityId: ticketData.facilityId,
-                date: ticketData.date ? new Date(ticketData.date) : null,
-                time: ticketData.time ? new Date(ticketData.time) : null,
+                facilityId: targetFacilityId,
+                date: ticketData.date ? new Date(ticketData.date) : undefined,
+                time: ticketData.time ? new Date(ticketData.time) : undefined,
                 photos: photos,
-                status: 'open'
+                status: 'created' // Matching prisma default or 'open'
             }
         });
 
         res.status(201).json({ success: true, ticket });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('❌ Ticket creation error:', error);
+        res.status(500).json({ error: error.message, details: error.code });
     }
 });
 
@@ -38,7 +55,7 @@ router.get('/', identifer(), async (req, res) => {
     try {
         let where = {};
 
-        if (req.user.role !== 'ADMIN') {
+        if (req.user.role !== 'CUERON_ADMIN' && req.user.role !== 'CUERON_EMPLOYEE') {
             // Non-admins only see tickets for their company
             where = {
                 facility: {
@@ -50,12 +67,14 @@ router.get('/', identifer(), async (req, res) => {
         const tickets = await prisma.serviceTicket.findMany({
             where,
             include: {
-                facility: true
+                facility: {
+                    include: { company: true }
+                }
             },
             orderBy: { createdAt: 'desc' }
         });
 
-        res.json(tickets);
+        res.json({ success: true, tickets });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -122,7 +141,7 @@ router.patch('/:id/close', identifer(['MASTER', 'EMPLOYEE']), async (req, res) =
 // ============================================
 // ADMIN ACT ON TICKET
 // ============================================
-router.patch('/:id/act', identifer(['ADMIN']), async (req, res) => {
+router.patch('/:id/act', identifer(['CUERON_ADMIN']), async (req, res) => {
     try {
         const { id } = req.params;
         const { status, notes } = req.body;
