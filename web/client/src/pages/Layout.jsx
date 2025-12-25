@@ -10,7 +10,9 @@ import {
     Server,
     LogOut,
     ChevronRight,
-    Ticket
+    Ticket,
+    Users,
+    Shield
 } from 'lucide-react';
 
 function Layout() {
@@ -24,14 +26,36 @@ function Layout() {
         navigate('/login');
     };
 
-    const navItems = [
-        { path: '/', label: 'Overview', icon: LayoutDashboard },
-        { path: '/sensors', label: 'Monitor', icon: Activity },
-        { path: '/alerts', label: 'Alert Center', icon: AlertTriangle },
-        { path: '/analytics', label: 'Insights', icon: BarChart2 },
-        { path: '/devices', label: 'Infrastructure', icon: Server },
-        { path: '/tickets', label: 'Ticketing', icon: Ticket },
-    ];
+    // Role-based navigation items
+    const getNavItems = () => {
+        const baseItems = [
+            { path: '/sensors', label: 'Monitor', icon: Activity },
+            { path: '/alerts', label: 'Alert Center', icon: AlertTriangle },
+            { path: '/analytics', label: 'Insights', icon: BarChart2 },
+            { path: '/devices', label: 'Infrastructure', icon: Server },
+            { path: '/tickets', label: 'Ticketing', icon: Ticket },
+        ];
+
+        if (user?.role === 'CUERON_ADMIN' || user?.role === 'CUERON_EMPLOYEE') {
+            return [
+                { path: '/', label: 'Admin Dashboard', icon: Shield },
+                ...baseItems
+            ];
+        } else if (user?.role === 'MASTER') {
+            return [
+                { path: '/', label: 'Overview', icon: LayoutDashboard },
+                { path: '/users', label: 'Manage Users', icon: Users },
+                ...baseItems
+            ];
+        } else {
+            return [
+                { path: '/', label: 'Overview', icon: LayoutDashboard },
+                ...baseItems
+            ];
+        }
+    };
+
+    const navItems = getNavItems();
 
     return (
         <div className="flex h-screen overflow-hidden text-slate-900">
@@ -84,12 +108,21 @@ function Layout() {
                         <div className="relative group cursor-pointer shrink-0">
                             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full opacity-30 group-hover:opacity-100 transition duration-500 blur-sm"></div>
                             <div className="relative w-10 h-10 rounded-full bg-white flex items-center justify-center text-sm font-bold border border-slate-200 shrink-0">
-                                {user?.name?.charAt(0) || 'U'}
+                                {user?.firstName?.charAt(0) || user?.email?.charAt(0) || 'U'}
                             </div>
                         </div>
                         <div className="ml-4 truncate">
-                            <p className="text-sm font-semibold text-slate-800 truncate">{user?.name || 'Demo User'}</p>
-                            <p className="text-xs text-slate-500 truncate">{user?.role || 'Admin'}</p>
+                            <p className="text-sm font-semibold text-slate-800 truncate">
+                                {user?.firstName && user?.lastName
+                                    ? `${user.firstName} ${user.lastName}`
+                                    : user?.email || 'User'}
+                            </p>
+                            <p className="text-xs text-slate-500 truncate">
+                                {user?.role === 'CUERON_ADMIN' ? 'Cueron Admin' :
+                                    user?.role === 'CUERON_EMPLOYEE' ? 'Cueron Employee' :
+                                        user?.role === 'MASTER' ? 'Master Account' :
+                                            user?.role === 'EMPLOYEE' ? 'Employee' : 'User'}
+                            </p>
                         </div>
                     </div>
                     <motion.button
