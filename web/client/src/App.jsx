@@ -13,6 +13,8 @@ import AlertCenter from './components/Alerts/AlertCenter';
 import Analytics from './components/Analytics/Analytics';
 import DeviceList from './components/Devices/DeviceList';
 import TicketCenter from './components/Ticketing/TicketCenter';
+import AdminDashboard from './components/Admin/AdminDashboard';
+import UserManagement from './components/Users/UserManagement';
 
 function App() {
   const [authUser, setAuthUser] = useState(null);
@@ -53,12 +55,10 @@ function App() {
             setAuthUser(data.user);
           } else {
             localStorage.removeItem('token');
-            setLoading(false); // Ensure loading stops even on failure
           }
         })
         .catch(() => {
           localStorage.removeItem('token');
-          setLoading(false);
         })
         .finally(() => setLoading(false));
     } else {
@@ -67,7 +67,14 @@ function App() {
   }, []);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-900 text-white">
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="font-bold tracking-widest uppercase text-xs text-slate-400">Loading ColdChain Intelligence...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -77,11 +84,32 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
 
-            {/* Temporarily allow access even if not logged in for dev, or follow strict guide */}
-            {/* Guide logic: */}
+            {/* Role-based routing */}
             {authUser ? (
               <Route element={<Layout />}>
-                <Route path="/" element={<Dashboard />} />
+                {/* CUERON staff routes */}
+                {(authUser.role === 'CUERON_ADMIN' || authUser.role === 'CUERON_EMPLOYEE') && (
+                  <>
+                    <Route path="/" element={<AdminDashboard />} />
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/client/:companyId" element={<Dashboard />} />
+                  </>
+                )}
+
+                {/* MASTER staff routes */}
+                {authUser.role === 'MASTER' && (
+                  <>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/users" element={<UserManagement />} />
+                  </>
+                )}
+
+                {/* EMPLOYEE routes */}
+                {authUser.role === 'EMPLOYEE' && (
+                  <Route path="/" element={<Dashboard />} />
+                )}
+
+                {/* Shared routes */}
                 <Route path="/sensors" element={<SensorMonitor />} />
                 <Route path="/alerts" element={<AlertCenter />} />
                 <Route path="/analytics" element={<Analytics />} />
