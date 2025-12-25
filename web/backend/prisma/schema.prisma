@@ -7,7 +7,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 // ============================================
@@ -35,9 +35,10 @@ model User {
 }
 
 enum UserRole {
-  ADMIN
-  MASTER
-  EMPLOYEE
+  CUERON_ADMIN      // Admin/Cueron - full system access
+  CUERON_EMPLOYEE   // Employee of Cueron - limited admin access
+  MASTER            // Client's Master Account - company admin
+  EMPLOYEE          // Employee of Client - limited company access
 }
 
 // ============================================
