@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import { AuthContext } from '../../context/AuthContext';
 import { SensorContext } from '../../context/SensorContext';
 import socketService from '../../services/socketService';
 import MetricsCard from './MetricsCard';
@@ -14,8 +15,18 @@ import {
     AlertCircle
 } from 'lucide-react';
 
+import { useParams } from 'react-router-dom';
+
 function Dashboard() {
+    const { user } = useContext(AuthContext);
     const { sensorData, alerts } = useContext(SensorContext);
+    const { companyId: paramCompanyId } = useParams();
+
+    // Effective companyId: either from URL (for admin) or from user profile
+    const effectiveCompanyId = (user?.role === 'CUERON_ADMIN' || user?.role === 'CUERON_EMPLOYEE')
+        ? (paramCompanyId || user?.companyId)
+        : user?.companyId;
+
     const [liveMetrics, setLiveMetrics] = useState({
         temperature: 0,
         humidity: 0,
@@ -24,12 +35,33 @@ function Dashboard() {
     });
 
     useEffect(() => {
-        socketService.emit('subscribe-company', 'company-123');
+        if (!effectiveCompanyId) return;
+
+        socketService.emit('subscribe-company', effectiveCompanyId);
+
+        // Listen for real-time sensor updates for this specific company
+        const handleSensorUpdate = (data) => {
+            if (data.companyId === effectiveCompanyId) {
+                // Update basic metrics based on latest data
+                setLiveMetrics(prev => ({
+                    ...prev,
+                    temperature: data.readings[0]?.temperature || prev.temperature,
+                    humidity: data.readings[0]?.humidity || prev.humidity
+                }));
+            }
+        };
+
+        socketService.on('sensor-update', handleSensorUpdate);
+
         socketService.on('metrics-update', (metrics) => {
             setLiveMetrics(metrics);
         });
-        return () => socketService.off('metrics-update');
-    }, []);
+
+        return () => {
+            socketService.off('sensor-update', handleSensorUpdate);
+            socketService.off('metrics-update');
+        };
+    }, [effectiveCompanyId]);
 
     return (
         <div className="space-y-8 pb-12">
