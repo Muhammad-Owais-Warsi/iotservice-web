@@ -66,6 +66,7 @@ const analyticsRoutes = require('../routes/analytics');
 const reportRoutes = require('../routes/reports');
 const serviceRoutes = require('../routes/services');
 const usersRoutes = require('../routes/users');
+const setupRoutes = require('../routes/setup');
 
 // ============================================
 // ROUTE MOUNTING
@@ -79,6 +80,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/setup', setupRoutes);
 
 // ============================================
 // HEALTH CHECK
