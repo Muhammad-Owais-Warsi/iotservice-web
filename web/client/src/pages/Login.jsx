@@ -41,76 +41,80 @@ function Login() {
 
     return (
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-white">
-            {/* Ambient Background Elements */}
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-slate-200/40 blur-[120px] rounded-full"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-100/40 blur-[120px] rounded-full"></div>
+            {/* Ambient Background Elements - Airy & Clean */}
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-50 blur-[130px] rounded-full opacity-60"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-50 blur-[130px] rounded-full opacity-60"></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none"></div>
 
             <div className="relative z-10 w-full max-w-lg px-6">
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, ease: "easeOut" }}
-                    className="glass-card p-10 rounded-[3rem] border border-slate-100 shadow-2xl bg-white/80 backdrop-blur-2xl"
+                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    className="p-12 rounded-[3.5rem] border border-slate-100 shadow-2xl bg-white/70 backdrop-blur-3xl relative overflow-hidden"
                 >
-                    <div className="text-center mb-10">
+                    {/* Corner Accents */}
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-blue-100/30 blur-3xl -mr-20 -mt-20"></div>
+
+                    <div className="text-center mb-12 relative">
                         <motion.div
-                            initial={{ scale: 0.5, opacity: 0 }}
+                            initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                            className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-slate-900 mb-6 shadow-xl shadow-slate-900/10"
+                            transition={{ delay: 0.3, type: "spring", stiffness: 150 }}
+                            className="inline-flex items-center justify-center w-24 h-24 rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-700 mb-8 shadow-2xl shadow-blue-500/30"
                         >
-                            <ShieldCheck className="text-white w-10 h-10" />
+                            <ShieldCheck className="text-white w-12 h-12" />
                         </motion.div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tight-head mb-2">
-                            Security Gateway
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-3 text-balance">
+                            COLDCHAIN
                         </h1>
-                        <p className="text-slate-500 font-medium tracking-wide">Authorized Personnel Only</p>
+                        <p className="text-blue-600 font-black tracking-[0.25em] text-[10px] uppercase opacity-80">Security Access Terminal // Node 01</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-8 relative">
                         {error && (
                             <motion.div
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className="bg-rose-50 border border-rose-100 text-rose-600 p-4 rounded-2xl text-sm font-bold flex items-center"
+                                className="bg-rose-50 border border-rose-100 text-rose-600 p-5 rounded-2xl text-[11px] font-black uppercase tracking-wider flex items-center"
                             >
-                                <Lock size={16} className="mr-3" />
+                                <Lock size={14} className="mr-4" />
                                 {error}
                             </motion.div>
                         )}
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-2">
-                                Identification
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">
+                                Operator Identity
                             </label>
                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-900 transition-colors">
+                                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-300 group-focus-within:text-blue-600 transition-colors">
                                     <Mail size={18} />
                                 </div>
                                 <input
                                     type="email"
                                     required
                                     placeholder="operator@coldchain.inc"
-                                    className="block w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all font-medium"
+                                    className="block w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all font-bold text-sm"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                 />
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-2">
-                                Security Key
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">
+                                Access Token
                             </label>
                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-900 transition-colors">
+                                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-300 group-focus-within:text-blue-600 transition-colors">
                                     <Lock size={18} />
                                 </div>
                                 <input
                                     type="password"
                                     required
                                     placeholder="••••••••"
-                                    className="block w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all font-medium"
+                                    className="block w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all font-bold text-sm"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
@@ -118,20 +122,20 @@ function Login() {
                         </div>
 
                         <motion.button
-                            whileHover={{ scale: 1.01, y: -2 }}
-                            whileTap={{ scale: 0.99 }}
+                            whileHover={{ scale: 1.02, y: -2 }}
+                            whileTap={{ scale: 0.98 }}
                             type="submit"
-                            className="w-full flex justify-center items-center py-5 px-6 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-slate-900/10 group active:scale-95"
+                            className="w-full flex justify-center items-center py-6 px-8 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-[0.25em] transition-all shadow-xl shadow-blue-500/30 group active:scale-95"
                         >
-                            Authorize Access
-                            <ArrowRight size={18} className="ml-3 group-hover:translate-x-1 transition-transform" />
+                            Authorize Uplink
+                            <ArrowRight size={18} className="ml-4 group-hover:translate-x-2 transition-transform duration-300" />
                         </motion.button>
                     </form>
 
-                    <div className="mt-10 pt-8 border-t border-slate-50 text-center">
-                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest leading-loose">
-                            Secured Industrial Node v4.1.0<br />
-                            © ColdChain Dynamics 2024
+                    <div className="mt-12 pt-10 border-t border-slate-50 text-center">
+                        <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] leading-loose">
+                            Secured Industrial Node v4.1.0-LIGHT<br />
+                            <span className="text-slate-300">© 2024 ColdChain Dynamics // Authorization Req.</span>
                         </p>
                     </div>
                 </motion.div>
@@ -141,11 +145,11 @@ function Login() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1 }}
-                    className="mt-8 flex justify-center space-x-6 text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]"
+                    className="mt-10 flex justify-center space-x-10 text-slate-300 font-black text-[9px] uppercase tracking-[0.4em]"
                 >
-                    <span className="cursor-pointer hover:text-slate-900 transition-colors">Support</span>
-                    <span className="cursor-pointer hover:text-slate-900 transition-colors">Internal API</span>
-                    <span className="cursor-pointer hover:text-slate-900 transition-colors">Nodes</span>
+                    <span className="cursor-pointer hover:text-blue-600 transition-colors">Emergency</span>
+                    <span className="cursor-pointer hover:text-blue-600 transition-colors">Protocols</span>
+                    <span className="cursor-pointer hover:text-blue-600 transition-colors">Support</span>
                 </motion.div>
             </div>
         </div>
