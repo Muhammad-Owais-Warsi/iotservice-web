@@ -160,16 +160,19 @@ const AdminDashboard = () => {
         }
     };
 
-    const filteredCompanies = companies.filter(c =>
+    const filteredCompanies = (Array.isArray(companies) ? companies : []).filter(c =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.industry.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (loading) {
         return (
-            <div className="admin-loading">
-                <div className="spinner"></div>
-                <p>Establishing Secure Connection...</p>
+            <div className="admin-loading bg-slate-950">
+                <div className="relative">
+                    <div className="w-20 h-20 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                    <Shield className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-blue-500" size={32} />
+                </div>
+                <p className="mt-8 font-black uppercase tracking-[0.3em] text-blue-500 text-xs animate-pulse">Establishing Secure Node...</p>
             </div>
         );
     }
@@ -217,10 +220,10 @@ const AdminDashboard = () => {
 
             <div className="stats-grid">
                 {[
-                    { label: 'Enterprises', val: companies.length, icon: Building, color: 'blue' },
-                    { label: 'Commanders', val: users.filter(u => u.role === 'MASTER').length, icon: Shield, color: 'purple' },
-                    { label: 'Personnel', val: users.filter(u => u.role === 'EMPLOYEE').length, icon: Users, color: 'emerald' },
-                    { label: 'Interventions', val: users.filter(u => u.status === 'suspended').length, icon: AlertTriangle, color: 'amber' }
+                    { label: 'Enterprises', val: (Array.isArray(companies) ? companies : []).length, icon: Building, color: 'blue' },
+                    { label: 'Commanders', val: (Array.isArray(users) ? users : []).filter(u => u.role === 'MASTER').length, icon: Shield, color: 'purple' },
+                    { label: 'Personnel', val: (Array.isArray(users) ? users : []).filter(u => u.role === 'EMPLOYEE').length, icon: Users, color: 'emerald' },
+                    { label: 'Interventions', val: (Array.isArray(users) ? users : []).filter(u => u.status === 'suspended').length, icon: AlertTriangle, color: 'amber' }
                 ].map((stat, i) => (
                     <motion.div
                         key={i}
