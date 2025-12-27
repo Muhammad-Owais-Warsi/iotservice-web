@@ -101,18 +101,28 @@ const TicketCenter = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            let facilitiesData = response.data.map(d => d.facility).filter((v, i, a) => a && v && a.findIndex(t => t && (t.id === v.id)) === i);
+            if (response.data.success && Array.isArray(response.data.devices)) {
+                let facilitiesData = response.data.devices
+                    .map(d => d.facility)
+                    .filter((v, i, a) => a && v && a.findIndex(t => t && (t.id === v.id)) === i);
 
-            if (facilitiesData.length === 0) {
-                facilitiesData = [
+                if (facilitiesData.length === 0) {
+                    facilitiesData = [
+                        { id: 'mock-1', name: 'Main Production Plant' },
+                        { id: 'mock-2', name: 'West Wing Warehouse' },
+                        { id: 'mock-3', name: 'Research Lab A' },
+                        { id: 'mock-4', name: 'Corporate Office' }
+                    ];
+                }
+                setFacilities(facilitiesData);
+            } else {
+                setFacilities([
                     { id: 'mock-1', name: 'Main Production Plant' },
                     { id: 'mock-2', name: 'West Wing Warehouse' },
                     { id: 'mock-3', name: 'Research Lab A' },
                     { id: 'mock-4', name: 'Corporate Office' }
-                ];
+                ]);
             }
-
-            setFacilities(facilitiesData);
         } catch (error) {
             console.error('Error fetching facilities:', error);
             setFacilities([
@@ -129,12 +139,23 @@ const TicketCenter = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
+            console.log(`[TicketCenter] Fetching tickets from ${API_URL}/api/services`);
+
             const response = await axios.get(`${API_URL}/api/services`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setTickets(response.data);
+            console.log('[TicketCenter] Response:', response.data);
+
+            if (response.data.success && Array.isArray(response.data.tickets)) {
+                console.log(`[TicketCenter] Found ${response.data.tickets.length} tickets`);
+                setTickets(response.data.tickets);
+            } else {
+                console.warn('[TicketCenter] Invalid response structure:', response.data);
+                setTickets([]);
+            }
         } catch (error) {
-            console.error('Error fetching tickets:', error);
+            console.error('[TicketCenter] Error fetching tickets:', error);
+            setTickets([]);
         } finally {
             setLoading(false);
         }
@@ -444,8 +465,8 @@ const TicketCenter = () => {
                                         <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Asset Location</label>
                                         <FacilityDropdown
                                             facilities={facilities}
-                                            selectedId={newTicket.facilityId}
-                                            onSelect={(id) => setNewTicket({ ...newTicket, facilityId: id })}
+                                            value={newTicket.facilityId}
+                                            onChange={(id) => setNewTicket({ ...newTicket, facilityId: id })}
                                         />
                                     </div>
                                 </div>
