@@ -12,7 +12,11 @@ router.post('/', identifer(['CUERON_ADMIN', 'CUERON_EMPLOYEE', 'MASTER', 'EMPLOY
         const ticketData = req.body;
 
         // Extract photo URLs if files were uploaded
-        const photos = req.files ? req.files.map(file => `/uploads/tickets/${file.filename}`) : [];
+        const photos = req.files ? req.files.map(file => {
+            if (file.filename) return `/uploads/tickets/${file.filename}`;
+            // Fallback for Vercel/MemoryStorage (files are not actually saved to disk)
+            return `/uploads/tickets/vercel-simulated-${Date.now()}-${file.originalname}`;
+        }) : [];
 
         // Automation: Ensure correct company association for clients
         let targetFacilityId = ticketData.facilityId;
