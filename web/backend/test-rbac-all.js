@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://iotservice-backend.vercel.app/api';
 
 const testUsers = [
     { email: 'admin@test.com', password: 'test1234', role: 'CUERON_ADMIN' },
