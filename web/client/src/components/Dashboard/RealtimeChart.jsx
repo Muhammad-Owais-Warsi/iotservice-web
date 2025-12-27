@@ -62,24 +62,28 @@ function RealtimeChart({ type, data }) {
                 display: false,
             },
             tooltip: {
-                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                titleColor: '#0f172a',
+                bodyColor: '#475569',
                 titleFont: { size: 12, weight: 'bold' },
                 bodyFont: { size: 12 },
                 padding: 12,
-                cornerRadius: 12,
+                cornerRadius: 16,
                 displayColors: false,
                 borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.1)',
+                borderColor: '#e2e8f0',
+                shadowColor: 'rgba(0,0,0,0.1)',
+                shadowBlur: 10
             },
         },
         scales: {
             x: {
                 grid: { display: false },
-                ticks: { color: 'rgba(255, 255, 255, 0.4)', font: { size: 10 } }
+                ticks: { color: '#94a3b8', font: { size: 10, weight: '600' } }
             },
             y: {
-                grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                ticks: { color: 'rgba(255, 255, 255, 0.4)', font: { size: 10 } },
+                grid: { color: '#f1f5f9' },
+                ticks: { color: '#94a3b8', font: { size: 10, weight: '600' } },
                 border: { display: false }
             },
         },
@@ -90,17 +94,22 @@ function RealtimeChart({ type, data }) {
     };
 
     return (
-        <div className="glass-card p-6 rounded-3xl h-[400px] border border-white/5">
-            <div className="flex items-center justify-between mb-6">
+        <div className="bg-white p-10 rounded-[2.5rem] h-[450px] border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-500">
+            <div className="flex items-center justify-between mb-8 relative z-10">
                 <div>
-                    <h3 className="text-white font-bold text-lg">{isTemp ? 'Thermal Dynamics' : 'Humidity Levels'}</h3>
-                    <p className="text-slate-400 text-xs uppercase tracking-widest font-semibold mt-1">Live Sensor Feed</p>
+                    <h3 className="text-slate-900 font-black text-xl tracking-tight">{isTemp ? 'Thermal Telemetry' : 'Hydrographic Data'}</h3>
+                    <p className="text-slate-400 text-[10px] uppercase tracking-[0.2em] font-black mt-1">Live Sensor Array Uplink</p>
                 </div>
-                <div className={`w-2 h-2 rounded-full ${isTemp ? 'bg-rose-500 animate-pulse' : 'bg-blue-500 animate-pulse'}`}></div>
+                <div className="flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+                    <div className={`w-2 h-2 rounded-full ${isTemp ? 'bg-rose-500 animate-pulse' : 'bg-blue-500 animate-pulse'}`}></div>
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Active</span>
+                </div>
             </div>
-            <div className="flex-1 h-[300px]">
+            <div className="flex-1 h-[320px] relative z-10">
                 <Line options={options} data={chartData} />
             </div>
+            {/* Subtle Texture Overlay */}
+            <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-50/50 to-transparent pointer-events-none"></div>
         </div>
     );
 }
