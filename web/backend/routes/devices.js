@@ -17,13 +17,14 @@ router.get('/', identifer(), async (req, res) => {
         const devices = await prisma.device.findMany({
             where,
             include: {
-                facility: { select: { name: true, location: true } },
+                facility: { select: { id: true, name: true, location: true } },
                 company: { select: { name: true } }
             },
             orderBy: { lastSeen: 'desc' }
         });
         res.json({ success: true, devices });
     } catch (error) {
+        console.error('❌ GET /api/devices error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -52,6 +53,7 @@ router.post('/register', identifer(['CUERON_ADMIN', 'MASTER']), async (req, res)
 
         res.status(201).json({ success: true, device });
     } catch (error) {
+        console.error('❌ POST /api/devices/register error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -80,6 +82,7 @@ router.get('/:id', identifer(), async (req, res) => {
 
         res.json({ success: true, device });
     } catch (error) {
+        console.error('❌ GET /api/devices/:id error:', error);
         res.status(500).json({ error: error.message });
     }
 });
