@@ -17,37 +17,37 @@ function MetricsCard({ title, value, trend, color, icon: Icon }) {
 
     return (
         <motion.div
-            whileHover={{ y: -4, scale: 1.02 }}
-            className={`glass-card p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between h-full border ${selectedVariant.split(' ').pop()}`}
+            whileHover={{ y: -6, scale: 1.02 }}
+            className={`bg-white p-8 rounded-[2rem] relative overflow-hidden flex flex-col justify-between h-full border border-slate-100 shadow-sm transition-all duration-400 hover:shadow-xl hover:shadow-slate-200/50`}
         >
-            {/* Background Glow */}
-            <div className={`absolute -top-12 -right-12 w-24 h-24 blur-3xl rounded-full opacity-20 bg-gradient-to-br ${selectedVariant}`}></div>
+            {/* Architectural Glow */}
+            <div className={`absolute -top-16 -right-16 w-32 h-32 blur-[60px] rounded-full opacity-10 bg-gradient-to-br ${selectedVariant.split(' ').slice(0, 2).join(' ')}`}></div>
 
-            <div className="flex items-start justify-between mb-4 relative z-10">
-                <div className="space-y-1">
-                    <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{title}</p>
+            <div className="flex items-start justify-between mb-6 relative z-10">
+                <div className="space-y-2">
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">{title}</p>
                     <motion.h2
-                        initial={{ opacity: 0, scale: 0.9 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="text-3xl font-bold text-white tracking-tight"
+                        className="text-4xl font-black text-slate-900 tracking-tighter"
                     >
                         {value}
                     </motion.h2>
                 </div>
                 {Icon && (
-                    <div className={`p-3 rounded-2xl glass border border-white/5 ${selectedVariant.split(' ').filter(c => c.startsWith('text-')).join(' ')}`}>
-                        <Icon size={20} />
+                    <div className={`p-4 rounded-2xl bg-white border border-slate-100 shadow-sm ${selectedVariant.split(' ').filter(c => c.startsWith('text-')).join(' ')}`}>
+                        <Icon size={24} strokeWidth={2.5} />
                     </div>
                 )}
             </div>
 
-            <div className="flex items-center space-x-2 relative z-10">
-                <div className={`flex items-center px-2 py-1 rounded-lg text-xs font-bold glass border border-white/5 ${isPositive ? 'text-emerald-400' : isNegative ? 'text-rose-400' : 'text-slate-400'
+            <div className="flex items-center space-x-3 relative z-10">
+                <div className={`flex items-center px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${isPositive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : isNegative ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-100'
                     }`}>
-                    {isPositive ? <TrendingUp size={12} className="mr-1" /> : isNegative ? <TrendingDown size={12} className="mr-1" /> : <Minus size={12} className="mr-1" />}
+                    {isPositive ? <TrendingUp size={12} className="mr-2" /> : isNegative ? <TrendingDown size={12} className="mr-2" /> : <Minus size={12} className="mr-2" />}
                     {trend}
                 </div>
-                <span className="text-[10px] text-slate-500 font-medium uppercase tracking-tighter">vs last hour</span>
+                <span className="text-[9px] text-slate-300 font-bold uppercase tracking-widest">vs prev epoch</span>
             </div>
         </motion.div>
     );
