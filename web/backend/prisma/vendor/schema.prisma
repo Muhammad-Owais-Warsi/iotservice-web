@@ -1,0 +1,445 @@
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model agencies {
+  id                     String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                   String                   @db.VarChar(255)
+  type                   agency_type
+  registration_number    String                   @db.VarChar(100)
+  gstn                   String                   @unique @db.VarChar(15)
+  nsdc_code              String?                  @db.VarChar(50)
+  contact_person         String                   @db.VarChar(255)
+  phone                  String                   @db.VarChar(15)
+  email                  String                   @db.VarChar(255)
+  primary_location       Json
+  service_areas          String[]                 @default([])
+  partnership_tier       partnership_tier?        @default(standard)
+  partnership_model      partnership_model
+  engineer_capacity      Int?                     @default(0)
+  bank_account_name      String?                  @db.VarChar(255)
+  bank_account_number    String?
+  bank_ifsc              String?                  @db.VarChar(11)
+  pan_number             String?
+  status                 agency_status?           @default(pending_approval)
+  onboarded_at           DateTime?                @db.Timestamptz(6)
+  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  users                  users                    @relation(fields: [email], references: [email], onDelete: NoAction, onUpdate: NoAction)
+  engineers              engineers[]
+  jobs                   jobs[]
+  new_engineers          new_engineers[]
+  new_engineers_requests new_engineers_requests[]
+  notifications          notifications[]
+  payments               payments[]
+  surveys                surveys[]
+
+  @@index([gstn], map: "idx_agencies_gstn")
+  @@index([status], map: "idx_agencies_status")
+  @@index([type], map: "idx_agencies_type")
+}
+
+model bids {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_id     String    @db.Uuid
+  user_id    String    @db.Uuid
+  name       String
+  email      String
+  phone      String
+  price      Int
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  new_jobs   new_jobs  @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([job_id, user_id], map: "bids_job_user_unique")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model engineers {
+  id                   String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  agency_id            String?                   @db.Uuid
+  user_id              String                    @unique @db.Uuid
+  name                 String                    @db.VarChar(255)
+  phone                String                    @unique @db.VarChar(15)
+  email                String?                   @db.VarChar(255)
+  photo_url            String?
+  certifications       Json?                     @default("[]")
+  skill_level          Int
+  specializations      String[]                  @default([])
+  availability_status  availability_status?      @default(available)
+  current_location     Unsupported("geography")?
+  last_location_update DateTime?                 @db.Timestamptz(6)
+  total_jobs_completed Int?                      @default(0)
+  average_rating       Decimal?                  @default(0.00) @db.Decimal(3, 2)
+  total_ratings        Int?                      @default(0)
+  success_rate         Decimal?                  @default(0.00) @db.Decimal(5, 2)
+  employment_type      employment_type
+  created_at           DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?                 @default(now()) @db.Timestamptz(6)
+  agencies             agencies?                 @relation(fields: [agency_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                users                     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  jobs                 jobs[]
+  surveys              surveys[]
+
+  @@index([agency_id], map: "idx_engineers_agency")
+  @@index([current_location], map: "idx_engineers_location", type: Gist)
+  @@index([phone], map: "idx_engineers_phone")
+  @@index([user_id], map: "idx_engineers_user_id")
+}
+
+model fcm_tokens {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id     String    @db.Uuid
+  token       String    @unique
+  device_type String    @db.VarChar(20)
+  device_id   String?   @db.VarChar(255)
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([token], map: "idx_fcm_tokens_token")
+  @@index([user_id], map: "idx_fcm_tokens_user")
+}
+
+model inspection {
+  id                              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_name                    String
+  company_phone                   String
+  company_email                   String
+  brand_name                      String
+  years_of_operation_in_equipment Int?
+  years_of_operations             Int?
+  location                        String
+  inspection_date                 DateTime  @db.Timestamp(6)
+  inspection_time                 DateTime  @db.Timestamp(6)
+  photos                          String[]
+  gst                             String
+  billing_address                 String
+  equipment_type                  String
+  equipment_sl_no                 String
+  capacity                        Int?
+  specification_plate_photo       String?
+  poc_name                        String
+  poc_phone                       String
+  poc_email                       String
+  problem_statement               String
+  possible_solution               String?
+  created_at                      DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model job_status_history {
+  id         String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  job_id     String                    @db.Uuid
+  status     job_status
+  changed_by String?                   @db.Uuid
+  location   Unsupported("geography")?
+  notes      String?
+  created_at DateTime?                 @default(now()) @db.Timestamptz(6)
+  jobs       jobs                      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_job_status_history_created")
+  @@index([job_id], map: "idx_job_status_history_job")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model jobs {
+  id                   String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  job_number           String                    @unique @db.VarChar(50)
+  client_id            String?                   @db.Uuid
+  client_name          String                    @db.VarChar(255)
+  client_phone         String                    @db.VarChar(15)
+  job_type             job_type
+  equipment_type       String                    @db.VarChar(255)
+  equipment_details    Json?
+  issue_description    String?
+  site_location        Json
+  site_coordinates     Unsupported("geography")?
+  assigned_agency_id   String?                   @db.Uuid
+  assigned_engineer_id String?                   @db.Uuid
+  required_skill_level Int
+  scheduled_time       DateTime?                 @db.Timestamptz(6)
+  urgency              urgency_level?            @default(normal)
+  response_deadline    DateTime?                 @db.Timestamptz(6)
+  status               job_status?               @default(pending)
+  assigned_at          DateTime?                 @db.Timestamptz(6)
+  accepted_at          DateTime?                 @db.Timestamptz(6)
+  started_at           DateTime?                 @db.Timestamptz(6)
+  completed_at         DateTime?                 @db.Timestamptz(6)
+  service_fee          Decimal?                  @db.Decimal(10, 2)
+  payment_status       payment_status?           @default(pending)
+  service_checklist    Json?
+  parts_used           Json?
+  photos_before        String[]                  @default([])
+  photos_after         String[]                  @default([])
+  engineer_notes       String?
+  client_signature_url String?
+  client_rating        Int?
+  client_feedback      String?
+  created_at           DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?                 @default(now()) @db.Timestamptz(6)
+  job_status_history   job_status_history[]
+  agencies             agencies?                 @relation(fields: [assigned_agency_id], references: [id], onUpdate: NoAction)
+  engineers            engineers?                @relation(fields: [assigned_engineer_id], references: [id], onUpdate: NoAction)
+  payments             payments[]
+  surveys              surveys[]
+
+  @@index([created_at], map: "idx_jobs_created_at")
+  @@index([job_number], map: "idx_jobs_job_number")
+  @@index([site_coordinates], map: "idx_jobs_location", type: Gist)
+  @@index([scheduled_time], map: "idx_jobs_scheduled_time")
+  @@index([status], map: "idx_jobs_status")
+  @@index([urgency], map: "idx_jobs_urgency")
+}
+
+model new_engineers {
+  user_id    String    @db.Uuid
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  name       String?
+  email      String?
+  phone      String?
+  agency_id  String?   @db.Uuid
+  id         String    @id(map: "new_engineers_pkey1") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agencies   agencies? @relation(fields: [agency_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model new_engineers_requests {
+  id         String    @id(map: "new_engineers_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  email      String
+  phone      String
+  role       String
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  user_id    String    @db.Uuid
+  agency_id  String?   @db.Uuid
+  agencies   agencies? @relation(fields: [agency_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model new_jobs {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  location          String
+  photos            String[]
+  assigned          String?   @db.Uuid
+  price             Int?
+  equipment_type    String
+  equipment_sl_no   String
+  poc_name          String
+  poc_phone         String
+  poc_email         String
+  problem_statement String
+  possible_solution String?
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  bids              bids[]
+  users             users?    @relation(fields: [assigned], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model notifications {
+  id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id             String    @db.Uuid
+  agency_id           String?   @db.Uuid
+  title               String    @db.VarChar(255)
+  message             String
+  type                String    @db.VarChar(50)
+  related_entity_type String?   @db.VarChar(50)
+  related_entity_id   String?   @db.Uuid
+  is_read             Boolean?  @default(false)
+  read_at             DateTime? @db.Timestamptz(6)
+  sent_via            String[]  @default([])
+  created_at          DateTime? @default(now()) @db.Timestamptz(6)
+  agencies            agencies? @relation(fields: [agency_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([agency_id], map: "idx_notifications_agency")
+  @@index([created_at], map: "idx_notifications_created")
+  @@index([is_read], map: "idx_notifications_is_read")
+  @@index([user_id], map: "idx_notifications_user")
+}
+
+model payments {
+  id                 String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  agency_id          String?         @db.Uuid
+  job_id             String?         @db.Uuid
+  amount             Decimal         @db.Decimal(10, 2)
+  payment_type       payment_type
+  status             payment_status? @default(pending)
+  payment_method     String?         @db.VarChar(50)
+  payment_gateway_id String?         @db.VarChar(255)
+  invoice_number     String?         @unique @db.VarChar(50)
+  invoice_url        String?
+  invoice_date       DateTime?       @db.Date
+  due_date           DateTime?       @db.Date
+  paid_at            DateTime?       @db.Timestamptz(6)
+  created_at         DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?       @default(now()) @db.Timestamptz(6)
+  agencies           agencies?       @relation(fields: [agency_id], references: [id], onUpdate: NoAction)
+  jobs               jobs?           @relation(fields: [job_id], references: [id], onUpdate: NoAction)
+
+  @@index([agency_id], map: "idx_payments_agency")
+  @@index([invoice_number], map: "idx_payments_invoice_number")
+  @@index([job_id], map: "idx_payments_job")
+  @@index([status], map: "idx_payments_status")
+}
+
+model requests {
+  id         BigInt   @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  name       String
+  email      String
+  phone      String
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+model surveys {
+  id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  job_number          String    @db.VarChar
+  description         String
+  equipments_required String[]
+  amount              Int?
+  photos              String[]
+  created_at          DateTime? @default(now()) @db.Timestamptz(6)
+  agency_id           String    @db.Uuid
+  engineer_id         String    @db.Uuid
+  agencies            agencies  @relation(fields: [agency_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  engineers           engineers @relation(fields: [engineer_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  jobs                jobs      @relation(fields: [job_number], references: [job_number], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model tickets {
+  id                              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_name                    String
+  company_phone                   String
+  company_email                   String
+  brand_name                      String
+  years_of_operation_in_equipment Int?
+  location                        String
+  inspection_date                 DateTime  @db.Timestamp(6)
+  inspection_time                 DateTime  @db.Timestamp(6)
+  photos                          String[]
+  gst                             String
+  billing_address                 String
+  equipment_type                  String
+  equipment_sl_no                 String
+  capacity                        Int?
+  specification_plate_photo       String?
+  poc_name                        String
+  poc_phone                       String
+  poc_email                       String
+  problem_statement               String
+  created_at                      DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model users {
+  id        String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email     String     @unique @db.VarChar(255)
+  role      user_role?
+  agencies  agencies[]
+  bids      bids[]
+  engineers engineers?
+  new_jobs  new_jobs[]
+}
+
+enum agency_status {
+  pending_approval
+  active
+  suspended
+  inactive
+}
+
+enum agency_type {
+  ITI
+  Training
+  Service
+  Vendor
+}
+
+enum availability_status {
+  available
+  on_job
+  offline
+  on_leave
+}
+
+enum certification_type {
+  PMKVY
+  ITI
+  NSDC
+  Other
+}
+
+enum employment_type {
+  full_time
+  part_time
+  gig
+  apprentice
+}
+
+enum job_status {
+  pending
+  assigned
+  accepted
+  travelling
+  onsite
+  completed
+  cancelled
+}
+
+enum job_type {
+  AMC
+  Repair
+  Installation
+  Emergency
+}
+
+enum partnership_model {
+  job_placement
+  dedicated_resource
+  training_placement
+}
+
+enum partnership_tier {
+  standard
+  premium
+  enterprise
+}
+
+enum payment_status {
+  pending
+  processing
+  paid
+  failed
+}
+
+enum payment_type {
+  job_payment
+  subscription
+  advance
+  refund
+}
+
+enum urgency_level {
+  emergency
+  urgent
+  normal
+  scheduled
+}
+
+enum user_role {
+  admin
+  manager
+  engineer
+}

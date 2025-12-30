@@ -1,4 +1,7 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require("@prisma/client");
+const {
+    PrismaClient: VendorClient,
+} = require("../prisma/vendor/generated/client");
 
 // Fix for "prepared statement already exists" error with Supabase/PgBouncer in Vercel
 const getDatabaseUrl = () => {
@@ -6,8 +9,8 @@ const getDatabaseUrl = () => {
     if (!url) return undefined;
 
     // Ensure pgbouncer mode is enabled for transaction pooling
-    if (!url.includes('pgbouncer=true')) {
-        const separator = url.includes('?') ? '&' : '?';
+    if (!url.includes("pgbouncer=true")) {
+        const separator = url.includes("?") ? "&" : "?";
         url = `${url}${separator}pgbouncer=true`;
     }
     return url;
@@ -21,4 +24,12 @@ const prisma = new PrismaClient({
     },
 });
 
-module.exports = prisma;
+const vendorPrisma = new VendorClient({
+    datasources: {
+        db: {
+            url: getDatabaseUrl(),
+        },
+    },
+});
+
+module.exports = { prisma, vendorPrisma };

@@ -4,11 +4,11 @@
   "type": "commonjs",
   "private": true,
   "devDependencies": {
+    "@prisma/client": "^6.1.0",
     "@types/bun": "latest",
-    "prisma": "^5.10.0"
+    "prisma": "^6.1.0"
   },
   "dependencies": {
-    "@prisma/client": "^5.10.0",
     "argon2": "^0.44.0",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
