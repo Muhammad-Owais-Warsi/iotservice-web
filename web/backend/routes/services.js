@@ -1,70 +1,94 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const prisma = require('../utils/prismaClient');
-const { identifer } = require('../middleware/identifier');
-const upload = require('../middleware/upload');
+const { prisma, vendorPrisma } = require("../utils/prismaClient");
+
+const { identifer } = require("../middleware/identifier");
+const upload = require("../middleware/upload");
 
 // ============================================
 // RAISE TICKET (Admin, Master, Employee)
 // ============================================
-router.post('/', identifer(['CUERON_ADMIN', 'CUERON_EMPLOYEE', 'MASTER', 'EMPLOYEE']), upload.array('photos', 5), async (req, res) => {
-    try {
-        const ticketData = req.body;
+router.post(
+    "/",
+    identifer(["CUERON_ADMIN", "CUERON_EMPLOYEE", "MASTER", "EMPLOYEE"]),
+    upload.array("photos", 5),
+    async (req, res) => {
+        try {
+            const ticketData = req.body;
 
-        // Extract photo URLs if files were uploaded
-        const photos = req.files ? req.files.map(file => {
-            if (file.filename) return `/uploads/tickets/${file.filename}`;
-            // Fallback for Vercel/MemoryStorage (files are not actually saved to disk)
-            return `/uploads/tickets/vercel-simulated-${Date.now()}-${file.originalname}`;
-        }) : [];
+            // Extract photo URLs if files were uploaded
+            const photos = req.files
+                ? req.files.map((file) => {
+                      if (file.filename)
+                          return `/uploads/tickets/${file.filename}`;
+                      // Fallback for Vercel/MemoryStorage (files are not actually saved to disk)
+                      return `/uploads/tickets/vercel-simulated-${Date.now()}-${file.originalname}`;
+                  })
+                : [];
 
-        // Automation: Ensure correct company association for clients
-        let targetFacilityId = ticketData.facilityId;
+            // Automation: Ensure correct company association for clients
+            let targetFacilityId = ticketData.facilityId;
 
-        const facility = await prisma.facility.findUnique({
-            where: { id: targetFacilityId }
-        });
+            const facility = await prisma.facility.findUnique({
+                where: { id: targetFacilityId },
+            });
 
-        if (!facility) return res.status(404).json({ error: 'Facility not found' });
+            if (!facility)
+                return res.status(404).json({ error: "Facility not found" });
 
-        // Security check for non-admins
-        if (req.user.role !== 'CUERON_ADMIN' && req.user.role !== 'CUERON_EMPLOYEE') {
-            if (facility.companyId !== req.user.companyId) {
-                return res.status(403).json({ error: 'Permission denied: Facility belongs to another company' });
+            // Security check for non-admins
+            if (
+                req.user.role !== "CUERON_ADMIN" &&
+                req.user.role !== "CUERON_EMPLOYEE"
+            ) {
+                if (facility.companyId !== req.user.companyId) {
+                    return res
+                        .status(403)
+                        .json({
+                            error: "Permission denied: Facility belongs to another company",
+                        });
+                }
             }
+
+            const ticket = await prisma.serviceTicket.create({
+                data: {
+                    ...ticketData,
+                    facilityId: targetFacilityId,
+                    date: ticketData.date
+                        ? new Date(ticketData.date)
+                        : undefined,
+                    time: ticketData.time
+                        ? new Date(ticketData.time)
+                        : undefined,
+                    photos: photos,
+                    status: "created", // Matching prisma default or 'open'
+                },
+            });
+
+            res.status(201).json({ success: true, ticket });
+        } catch (error) {
+            console.error("❌ Ticket creation error:", error);
+            res.status(500).json({ error: error.message, details: error.code });
         }
-
-        const ticket = await prisma.serviceTicket.create({
-            data: {
-                ...ticketData,
-                facilityId: targetFacilityId,
-                date: ticketData.date ? new Date(ticketData.date) : undefined,
-                time: ticketData.time ? new Date(ticketData.time) : undefined,
-                photos: photos,
-                status: 'created' // Matching prisma default or 'open'
-            }
-        });
-
-        res.status(201).json({ success: true, ticket });
-    } catch (error) {
-        console.error('❌ Ticket creation error:', error);
-        res.status(500).json({ error: error.message, details: error.code });
-    }
-});
+    },
+);
 
 // ============================================
 // VIEW TICKETS (All users can view their company's tickets, Admin views all)
 // ============================================
-router.get('/', identifer(), async (req, res) => {
+router.get("/", identifer(), async (req, res) => {
     try {
         let where = {};
 
-        if (req.user.role !== 'CUERON_ADMIN' && req.user.role !== 'CUERON_EMPLOYEE') {
+        if (
+            req.user.role !== "CUERON_ADMIN" &&
+            req.user.role !== "CUERON_EMPLOYEE"
+        ) {
             // Non-admins only see tickets for their company
             where = {
                 facility: {
-                    companyId: req.user.companyId
-                }
+                    companyId: req.user.companyId,
+                },
             };
         }
 
@@ -72,10 +96,10 @@ router.get('/', identifer(), async (req, res) => {
             where,
             include: {
                 facility: {
-                    include: { company: true }
-                }
+                    include: { company: true },
+                },
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: "desc" },
         });
 
         res.json({ success: true, tickets });
@@ -87,7 +111,7 @@ router.get('/', identifer(), async (req, res) => {
 // ============================================
 // EDIT TICKET (Master, Employee)
 // ============================================
-router.put('/:id', identifer(['MASTER', 'EMPLOYEE']), async (req, res) => {
+router.put("/:id", identifer(["MASTER", "EMPLOYEE"]), async (req, res) => {
     try {
         const { id } = req.params;
         const updateData = req.body;
@@ -95,17 +119,19 @@ router.put('/:id', identifer(['MASTER', 'EMPLOYEE']), async (req, res) => {
         // Verify ownership/company
         const ticket = await prisma.serviceTicket.findUnique({
             where: { id },
-            include: { facility: true }
+            include: { facility: true },
         });
 
-        if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+        if (!ticket) return res.status(404).json({ error: "Ticket not found" });
         if (ticket.facility.companyId !== req.user.companyId) {
-            return res.status(403).json({ error: 'Unauthorized to edit this ticket' });
+            return res
+                .status(403)
+                .json({ error: "Unauthorized to edit this ticket" });
         }
 
         const updatedTicket = await prisma.serviceTicket.update({
             where: { id },
-            data: updateData
+            data: updateData,
         });
 
         res.json({ success: true, ticket: updatedTicket });
@@ -117,35 +143,42 @@ router.put('/:id', identifer(['MASTER', 'EMPLOYEE']), async (req, res) => {
 // ============================================
 // CLOSE TICKET (Master, Employee)
 // ============================================
-router.patch('/:id/close', identifer(['MASTER', 'EMPLOYEE']), async (req, res) => {
-    try {
-        const { id } = req.params;
+router.patch(
+    "/:id/close",
+    identifer(["MASTER", "EMPLOYEE"]),
+    async (req, res) => {
+        try {
+            const { id } = req.params;
 
-        const ticket = await prisma.serviceTicket.findUnique({
-            where: { id },
-            include: { facility: true }
-        });
+            const ticket = await prisma.serviceTicket.findUnique({
+                where: { id },
+                include: { facility: true },
+            });
 
-        if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
-        if (ticket.facility.companyId !== req.user.companyId) {
-            return res.status(403).json({ error: 'Unauthorized to close this ticket' });
+            if (!ticket)
+                return res.status(404).json({ error: "Ticket not found" });
+            if (ticket.facility.companyId !== req.user.companyId) {
+                return res
+                    .status(403)
+                    .json({ error: "Unauthorized to close this ticket" });
+            }
+
+            await prisma.serviceTicket.update({
+                where: { id },
+                data: { status: "closed" },
+            });
+
+            res.json({ success: true, message: "Ticket closed" });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
         }
-
-        await prisma.serviceTicket.update({
-            where: { id },
-            data: { status: 'closed' }
-        });
-
-        res.json({ success: true, message: 'Ticket closed' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+    },
+);
 
 // ============================================
 // ADMIN ACT ON TICKET
 // ============================================
-router.patch('/:id/act', identifer(['CUERON_ADMIN']), async (req, res) => {
+router.patch("/:id/act", identifer(["CUERON_ADMIN"]), async (req, res) => {
     try {
         const { id } = req.params;
         const { status, notes } = req.body;
@@ -153,12 +186,12 @@ router.patch('/:id/act', identifer(['CUERON_ADMIN']), async (req, res) => {
         await prisma.serviceTicket.update({
             where: { id },
             data: {
-                status: status || 'in_progress',
-                completionNotes: notes
-            }
+                status: status || "in_progress",
+                completionNotes: notes,
+            },
         });
 
-        res.json({ success: true, message: 'Admin action recorded' });
+        res.json({ success: true, message: "Admin action recorded" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
