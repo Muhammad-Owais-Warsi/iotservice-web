@@ -26,31 +26,11 @@ router.post(
                   })
                 : [];
 
-            // Automation: Ensure correct company association for clients
-            let targetFacilityId = ticketData.facilityId;
+           
 
-            const facility = await prisma.facility.findUnique({
-                where: { id: targetFacilityId },
-            });
-
-            if (!facility)
-                return res.status(404).json({ error: "Facility not found" });
-
-            // Security check for non-admins
-            if (
-                req.user.role !== "CUERON_ADMIN" &&
-                req.user.role !== "CUERON_EMPLOYEE"
-            ) {
-                if (facility.companyId !== req.user.companyId) {
-                    return res
-                        .status(403)
-                        .json({
-                            error: "Permission denied: Facility belongs to another company",
-                        });
-                }
-            }
-
-            const ticket = await prisma.serviceTicket.create({
+            
+            // fix the schema 
+            const ticket = await vendorPrisma.tickets.create({
                 data: {
                     ...ticketData,
                     facilityId: targetFacilityId,
