@@ -26,14 +26,11 @@ router.post(
                   })
                 : [];
 
-           
-
-            
-            // fix the schema 
+            // fix the schema
             const ticket = await vendorPrisma.tickets.create({
                 data: {
                     ...ticketData,
-                    facilityId: targetFacilityId,
+                    // facilityId: targetFacilityId,
                     date: ticketData.date
                         ? new Date(ticketData.date)
                         : undefined,
