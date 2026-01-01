@@ -17,39 +17,40 @@ router.post("/login", async (req, res) => {
             return res.status(400).json({ error: error.details[0].message });
 
         const { email, password } = req.body;
-        console.log(vendorPrisma);
+        // console.log(vendorPrisma);
         const user = await vendorPrisma.users.findUnique({ where: { email } });
+        console.log(user);
         if (!user)
             return res.status(401).json({ error: "Invalid email or password" });
 
         // Check suspension status
-        if (user.status === "suspended") {
-            return res.status(403).json({
-                error: "Your account has been suspended. Please contact support.",
-            });
-        }
+        // if (user.status === "suspended") {
+        //     return res.status(403).json({
+        //         error: "Your account has been suspended. Please contact support.",
+        //     });
+        // }
 
         // Check if approved (for Masters and Employees)
-        if (
-            !user.isApproved &&
-            user.role !== "CUERON_ADMIN" &&
-            user.role !== "CUERON_EMPLOYEE"
-        ) {
-            return res.status(403).json({
-                error: "Your account is pending approval by the Admin.",
-            });
-        }
+        // if (
+        //     !user.isApproved &&
+        //     user.role !== "CUERON_ADMIN" &&
+        //     user.role !== "CUERON_EMPLOYEE"
+        // ) {
+        //     return res.status(403).json({
+        //         error: "Your account is pending approval by the Admin.",
+        //     });
+        // }
 
-        const validPassword = await argon2.verify(user.password, password);
-        if (!validPassword)
-            return res.status(401).json({ error: "Invalid email or password" });
+        // const validPassword = await argon2.verify(user.password, password);
+        // if (!validPassword)
+        //     return res.status(401).json({ error: "Invalid email or password" });
 
         const token = jwt.sign(
             {
                 id: user.id,
                 email: user.email,
                 role: user.role,
-                companyId: user.companyId,
+                // companyId: user.companyId,
             },
             process.env.SECRET_KEY,
             { expiresIn: "24h" },
@@ -62,9 +63,9 @@ router.post("/login", async (req, res) => {
                 id: user.id,
                 email: user.email,
                 role: user.role,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                companyId: user.companyId,
+                // firstName: user.firstName,
+                // lastName: user.lastName,
+                // companyId: user.companyId,
             },
         });
     } catch (err) {

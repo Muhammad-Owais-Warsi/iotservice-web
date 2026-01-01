@@ -10,11 +10,31 @@ const upload = require("../middleware/upload");
 // ============================================
 router.post(
     "/",
-    identifer(["CUERON_ADMIN", "CUERON_EMPLOYEE", "MASTER", "EMPLOYEE"]),
+    identifer(["admin", "CUERON_EMPLOYEE", "MASTER", "EMPLOYEE"]),
     upload.array("photos", 5),
     async (req, res) => {
         try {
-            const ticketData = req.body;
+            // Explicitly map and typecast all fields from the new schema
+            const {
+                company_name,
+                company_phone,
+                company_email,
+                brand_name,
+                years_of_operation_in_equipment,
+                location,
+                inspection_date,
+                inspection_time,
+                gst,
+                billing_address,
+                equipment_type,
+                equipment_sl_no,
+                capacity,
+                specification_plate_photo,
+                poc_name,
+                poc_phone,
+                poc_email,
+                problem_statement,
+            } = req.body;
 
             // Extract photo URLs if files were uploaded
             const photos = req.files
@@ -26,19 +46,38 @@ router.post(
                   })
                 : [];
 
-            // fix the schema
             const ticket = await vendorPrisma.tickets.create({
                 data: {
-                    ...ticketData,
-                    // facilityId: targetFacilityId,
-                    date: ticketData.date
-                        ? new Date(ticketData.date)
-                        : undefined,
-                    time: ticketData.time
-                        ? new Date(ticketData.time)
-                        : undefined,
-                    photos: photos,
-                    status: "created", // Matching prisma default or 'open'
+                    company_name,
+                    company_phone,
+                    company_email,
+                    brand_name,
+                    years_of_operation_in_equipment:
+                        years_of_operation_in_equipment
+                            ? parseInt(years_of_operation_in_equipment, 10)
+                            : null,
+                    location,
+                    inspection_date:
+                        inspection_date && !isNaN(Date.parse(inspection_date))
+                            ? new Date(inspection_date)
+                            : null,
+                    inspection_time:
+                        inspection_time && !isNaN(Date.parse(inspection_time))
+                            ? new Date(inspection_time)
+                            : null,
+                    photos,
+                    gst,
+                    billing_address,
+                    equipment_type,
+                    equipment_sl_no,
+                    capacity: capacity ? parseInt(capacity, 10) : null,
+                    specification_plate_photo,
+                    poc_name,
+                    poc_phone,
+                    poc_email,
+                    problem_statement,
+                    // status: "created",
+                    // created_at will default to now() in the DB
                 },
             });
 
@@ -55,28 +94,8 @@ router.post(
 // ============================================
 router.get("/", identifer(), async (req, res) => {
     try {
-        let where = {};
-
-        if (
-            req.user.role !== "CUERON_ADMIN" &&
-            req.user.role !== "CUERON_EMPLOYEE"
-        ) {
-            // Non-admins only see tickets for their company
-            where = {
-                facility: {
-                    companyId: req.user.companyId,
-                },
-            };
-        }
-
-        const tickets = await prisma.serviceTicket.findMany({
-            where,
-            include: {
-                facility: {
-                    include: { company: true },
-                },
-            },
-            orderBy: { createdAt: "desc" },
+        const tickets = await vendorPrisma.tickets.findMany({
+            orderBy: { created_at: "desc" },
         });
 
         res.json({ success: true, tickets });
